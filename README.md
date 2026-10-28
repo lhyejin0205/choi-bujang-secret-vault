@@ -1,25 +1,23 @@
-# BYTE BACK 방어전 시작 틀 R5
+# BYTE BACK 방어전 · 2단계 저장점
 
-이 저장소는 1단계에서 학생 본인이 GitHub 저장소와 Vercel 배포를 만드는 출발점입니다. 포함된 메모 네 건은 가상 자료입니다. 실제 학생 자료, 토큰, 비밀키를 넣지 마세요.
+## 현재 동작
 
-## 학생이 하는 일: 세 걸음
+- 자료 화면(`/`)은 `/api/notes`에서 가상 메모의 제목과 내용을 읽어 카드로 표시합니다.
+- `api/notes.js`는 서버에서 Supabase REST API를 호출합니다. `SUPABASE_URL`과 `SUPABASE_SECRET_KEY`는 Vercel 환경변수에 직접 입력해야 하며, 코드·로그·제출 파일에 넣지 마세요.
+- 빌드는 `public/aleph.json`에 Vercel의 저장소·커밋·배포 주소와 단계 정보를 기록합니다. 2단계부터 `data.json`이 남아 있으면 빌드가 실패합니다.
+- `stage2-notes.sql`은 메모 테이블과 가상 자료를 준비합니다. Supabase SQL Editor에서 직접 실행해야 합니다.
 
-1. GitHub 계정을 만듭니다.
-2. 방어전 1단계 카드의 **Deploy** 버튼을 누릅니다. Vercel에 GitHub로 로그인하고, 새 저장소가 **본인 계정의 Public 저장소**인지 확인한 뒤 Deploy를 누릅니다.
-3. 배포가 끝나면 화면에 나온 `https://…vercel.app` 주소를 방어전 1단계 카드에 붙여넣고 제출합니다. 저장소 주소나 설정 파일은 적지 않습니다.
+## 실행과 확인
 
-배포가 끝나면 `/`에서 점령된 가상 자료실을 볼 수 있습니다. `/data.json`에는 같은 가상 메모가 공개됩니다. 이 공개 상태를 확인하는 것이 1단계의 출발점입니다. 1단계 접수와 심판 판정은 포털에서 확인합니다.
+로컬 정적 빌드 확인: `npm run build -- --local`
 
-## 시작 틀의 자동 처리
+실제 화면을 확인하려면 Vercel 프로젝트의 **Settings → Environment Variables**에 두 환경변수를 직접 저장한 뒤 **Deployments → Redeploy**를 누르세요. 값은 채팅이나 코드에 붙여 넣지 마세요. 배포 뒤 사이트의 `/`에서 카드 네 장이 보이고, `/data.json`은 404여야 합니다.
 
-`vercel.json`은 정적 결과물 `public`을 배포합니다. 빌드 명령 `npm run build`는 Vercel이 제공하는 GitHub 저장소 소유자·이름, 커밋 SHA, 배포 URL을 검증하고 `public/aleph.json`을 생성합니다. 이 값이 없으면 빌드가 실패하므로, 성공한 것처럼 빈 주소를 내보내지 않습니다. `aleph.json`의 내용만으로 저장소 소유권이나 방어 성공을 인정하지 않습니다. 심판이 공개 저장소의 실제 커밋과 배포된 자료를 따로 대조해야 합니다.
+2단계의 의도된 약점: `/api/notes`는 아직 로그인 확인이 없습니다. 로그인하지 않은 요청에도 메모가 반환될 수 있습니다. 이는 현재 확인할 취약점이며, 자료는 모두 실습용 가상 내용입니다. 공개된 기존 Git 커밋이나 이전 배포의 `/data.json`은 이번 변경만으로 지워지지 않습니다.
 
-`aleph.config.json`의 `repoUrl`과 `publicAppUrl`은 이전 제출 묶음 방식의 자리표시자입니다. 1단계에서는 학생이 편집하지 않습니다. 2단계 이후 코딩 도구가 필요한 설정과 보호 기능을 단계별로 작성합니다. `npm run bundle`과 `bundle-notes.json`도 1단계의 세 걸음에는 포함되지 않습니다.
+## 확인된 범위와 다음 단계
 
-로컬에서 가상 화면만 확인할 때는 `npm run build -- --local`을 사용합니다. 로컬 실행은 Vercel 배포나 심판 접수를 증명하지 않습니다. 저장소의 `src/attack-check.mjs`는 실제 배포가 된 뒤 `/data.json`을 비로그인으로 요청해 공개 가상 메모의 확인 표시를 읽습니다.
-
-## 다음 단계의 코딩 도구에 전달할 규칙
-
-[AGENTS.md](AGENTS.md)를 먼저 읽히고 한 번에 한 제작 단위만 요청하세요. 2단계부터는 자료 보호를 구현할 때 `public/data.json`을 복사하는 1단계 빌드 흐름도 함께 바꿔야 합니다. 3단계 이후의 로그인, 허용 경로, 5단계의 원본 API 주소, 6단계 이후 정책 규칙은 해당 단계 원고와 계약에 맞춰 추가합니다. 비밀번호·토큰·서버 전용 키·실제 학생 기록을 코드, Git, 제출 묶음에 넣지 않습니다.
-
-`src/decider.mjs`와 `src/detect.mjs`의 로컬 시험은 반 엔진이나 운영 심판의 결과가 아닙니다. 1단계 이후 제출 묶음 계약 `aleph.defense.submission.v2`는 `scripts/bundle.mjs`에 남아 있으며, 코딩 도구가 해당 단계의 최신 배포 주소와 Git 원격을 맞춘 뒤 사용합니다.
+- 변경 사항은 로컬 시험으로 검증할 수 있지만, 이 저장소에는 실제 Supabase·Vercel·GitHub 연결이 없습니다. SQL 실행, 배포, 실제 키를 이용한 요청은 수행하지 않았습니다.
+- 이 단계의 `npm run bundle`은 깨끗한 Git 커밋, 본인 GitHub `origin`, 실제 `aleph.config.json` 주소와 `bundle-notes.json` 설명, 실제 배포 자기 점검이 필요합니다. 이 값이 준비되지 않아 제출 JSON을 생성하지 않았습니다.
+- `npm run decider:test`와 `npm run detect:test`가 실행된다면 이는 가상 연습이며 운영 심판 판정이 아닙니다.
+- 다음 실행 명령: `npm test`를 실행하세요. 정상 결과는 시험 11건 모두 통과이며, 빌드는 `data.json`이 남았을 때 거부되어야 합니다.

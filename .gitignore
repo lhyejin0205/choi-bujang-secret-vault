@@ -1,5 +1,6 @@
 artifacts/
 bundle-notes.json
+stage2-notes.sql
 .env
 .env.*
 node_modules/

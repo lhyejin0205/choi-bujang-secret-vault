@@ -31,6 +31,13 @@ test('build identity uses Vercel Git and deployment metadata', () => {
   assert.throws(() => deploymentIdentity({ ...env, VERCEL_GIT_COMMIT_SHA: 'short' }, config));
 });
 
+test('build identity supports step 2 without carrying the step 1 note marker', () => {
+  const identity = deploymentIdentity(env, { ...config, step: 2 });
+  assert.equal(identity.step, 2);
+  assert.equal(identity.publicAppUrl, 'https://student-defense-123.vercel.app');
+  assert.equal('sampleMarker' in identity, false);
+});
+
 test('first attack check reads public data.json without credentials', async () => {
   const originalFetch = globalThis.fetch;
   let requestUrl;
@@ -51,6 +58,26 @@ test('first attack check reads public data.json without credentials', async () =
     globalThis.fetch = async () => new Response('<html>not the data</html>', { status: 200 });
     const [failed] = await runAttackChecks(config);
     assert.match(failed.observed, /보이지 않음/u);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('step 2 attack check records the result of an anonymous notes API request', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestUrl;
+  try {
+    globalThis.fetch = async (url) => {
+      requestUrl = String(url);
+      return new Response(JSON.stringify([{ title: '가상 제목', content: '가상 내용' }]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    };
+    const [result] = await runAttackChecks({ ...config, step: 2 });
+    assert.equal(requestUrl, 'https://student-defense.vercel.app/api/notes');
+    assert.match(result.expected, /반환하지 않아야/u);
+    assert.match(result.observed, /메모가 반환됨/u);
   } finally {
     globalThis.fetch = originalFetch;
   }
