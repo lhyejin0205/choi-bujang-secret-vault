@@ -41,10 +41,22 @@ test('P7 시작 틀 안내는 실제 빌드 조건과 새 배포 시험에 맞�
   assert.match(selfCheck, /P7-3\.png/u);
 });
 
-test('2단계 빌드는 비공개 API로 교체된 자료 흐름을 기록한다', async () => {
+test('3단계 설정은 로그인 발급자와 실제 자료 API 경로를 기록하고 README에 흐름을 적는다', async () => {
   const config = JSON.parse(await readFile(new URL('../aleph.config.json', import.meta.url)));
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
-  assert.equal(config.step, 2);
+  const vercel = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)));
+  assert.equal(config.step, 3);
+  const issuer = new URL(config.identityProvider.issuer);
+  assert.equal(issuer.protocol, 'https:');
+  assert.equal(issuer.pathname, '/auth/v1');
+  assert.ok(issuer.hostname.endsWith('.supabase.co'));
+  assert.equal(config.identityProvider.jwksUrl, `${config.identityProvider.issuer}/.well-known/jwks.json`);
+  assert.equal(config.identityProvider.audience, 'authenticated');
+  assert.deepEqual(config.allowedRoutes, ['GET /api/notes', 'POST /api/notes', 'GET /api/notes/:id',
+    'PUT /api/notes/:id', 'DELETE /api/notes/:id']);
+  assert.equal(/sb_secret_|service_role/u.test(JSON.stringify(config)), false);
+  assert.deepEqual(vercel.rewrites, [{ source: '/api/notes/:id', destination: '/api/notes?id=:id' }]);
   assert.match(readme, /\/api\/notes/u);
   assert.match(readme, /SUPABASE_SECRET_KEY/u);
+  assert.match(readme, /verify-login/u);
 });

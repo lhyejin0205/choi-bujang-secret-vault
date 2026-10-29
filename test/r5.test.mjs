@@ -82,3 +82,31 @@ test('step 2 attack check records the result of an anonymous notes API request',
     globalThis.fetch = originalFetch;
   }
 });
+
+test('step 3 attack check sends only anonymous and forged-token requests and records real results', async () => {
+  const originalFetch = globalThis.fetch;
+  const sent = [];
+  try {
+    globalThis.fetch = async (url, init) => {
+      sent.push({ url: String(url), method: init.method, hasAuth: Boolean(init.headers?.authorization) });
+      return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401 });
+    };
+    const results = await runAttackChecks({ ...config, step: 3 });
+    assert.deepEqual(sent.map(({ method, hasAuth }) => [method, hasAuth]), [['GET', false], ['POST', false], ['GET', true]]);
+    assert.ok(sent.every(entry => entry.url === 'https://student-defense.vercel.app/api/notes'));
+    assert.deepEqual(results.map(item => item.attackId),
+      ['anonymous_notes_read', 'anonymous_notes_create', 'forged_token_notes_read', 'login_a_notes_read']);
+    assert.match(results[0].observed, /반환되지 않음 \(HTTP 401\)/u);
+    assert.match(results[1].observed, /거부됨 \(HTTP 401\)/u);
+    assert.match(results[3].observed, /^미실행/u);
+    assert.equal(JSON.stringify(results).includes('aaaaaaaaaa'), false);
+
+    globalThis.fetch = async () => new Response(JSON.stringify([{ id: 'x' }]), { status: 200 });
+    const leaked = await runAttackChecks({ ...config, step: 3 });
+    assert.match(leaked[0].observed, /자료가 반환됨/u);
+    assert.match(leaked[1].observed, /받아들여짐/u);
+    await assert.rejects(() => runAttackChecks({ ...config, step: 4 }));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
