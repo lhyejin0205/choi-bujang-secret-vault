@@ -41,12 +41,17 @@ test('P7 시작 틀 안내는 실제 빌드 조건과 새 배포 시험에 맞�
   assert.match(selfCheck, /P7-3\.png/u);
 });
 
-test('4단계 설정은 로그인 발급자와 실제 자료 API 경로를 기록하고 README에 흐름을 적는다', async () => {
+test('5단계 설정은 로그인 발급자, 실제 자료 API 경로, 원본 자료 주소를 기록하고 README에 흐름을 적는다', async () => {
   const config = JSON.parse(await readFile(new URL('../aleph.config.json', import.meta.url)));
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
   const vercel = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)));
-  assert.equal(config.step, 4);
+  assert.equal(config.step, 5);
   const issuer = new URL(config.identityProvider.issuer);
+  const original = new URL(config.originalApiUrl);
+  assert.equal(original.protocol, 'https:');
+  assert.equal(original.search, '');
+  assert.equal(original.pathname, '/rest/v1/notes');
+  assert.equal(original.host, issuer.host);
   assert.equal(issuer.protocol, 'https:');
   assert.equal(issuer.pathname, '/auth/v1');
   assert.ok(issuer.hostname.endsWith('.supabase.co'));

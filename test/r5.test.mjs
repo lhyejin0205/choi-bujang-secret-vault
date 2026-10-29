@@ -105,7 +105,7 @@ test('step 3 attack check sends only anonymous and forged-token requests and rec
     const leaked = await runAttackChecks({ ...config, step: 3 });
     assert.match(leaked[0].observed, /자료가 반환됨/u);
     assert.match(leaked[1].observed, /받아들여짐/u);
-    await assert.rejects(() => runAttackChecks({ ...config, step: 5 }));
+    await assert.rejects(() => runAttackChecks({ ...config, step: 6 }));
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -124,6 +124,42 @@ test('step 4 attack check keeps the anonymous checks and leaves owner attacks as
     assert.deepEqual(results.map(item => item.attackId), ['anonymous_notes_read', 'anonymous_notes_create',
       'forged_token_notes_read', 'login_a_notes_read', 'b_reads_a_note', 'b_updates_a_note', 'b_deletes_a_note', 'a_changes_owner']);
     for (const item of results.slice(4)) assert.match(item.observed, /^미실행/u);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('step 5 attack check also sends one anon-key request to the original API and records the real result', async () => {
+  const originalFetch = globalThis.fetch;
+  const sent = [];
+  const step5 = { ...config, step: 5, originalApiUrl: 'https://project.supabase.co/rest/v1/notes' };
+  try {
+    globalThis.fetch = async (url, init) => {
+      const u = new URL(url);
+      sent.push({ host: u.host, path: u.pathname, apikey: init.headers?.apikey });
+      return u.host === 'project.supabase.co'
+        ? new Response(JSON.stringify({ code: '42501' }), { status: 401 })
+        : new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401 });
+    };
+    const results = await runAttackChecks(step5);
+    const direct = sent.filter(item => item.host === 'project.supabase.co');
+    assert.equal(direct.length, 1);
+    assert.equal(direct[0].path, '/rest/v1/notes');
+    assert.match(direct[0].apikey, /^sb_publishable_/u);
+    const item = results.find(entry => entry.attackId === 'anon_original_api_read');
+    assert.match(item.observed, /반환되지 않음 \(HTTP 401\)/u);
+    assert.equal(JSON.stringify(results).includes('sb_publishable_'), false);
+
+    globalThis.fetch = async (url) => new URL(url).host === 'project.supabase.co'
+      ? new Response(JSON.stringify([{ id: 'x' }]), { status: 200 })
+      : new Response('{}', { status: 401 });
+    const leaked = await runAttackChecks(step5);
+    assert.match(leaked.find(entry => entry.attackId === 'anon_original_api_read').observed, /자료가 반환됨/u);
+
+    for (const bad of ['http://project.supabase.co/rest/v1/notes', 'https://project.supabase.co/rest/v1/notes?select=*',
+      'https://evil.example/rest/v1/notes', null]) {
+      await assert.rejects(() => runAttackChecks({ ...step5, originalApiUrl: bad }));
+    }
   } finally {
     globalThis.fetch = originalFetch;
   }
