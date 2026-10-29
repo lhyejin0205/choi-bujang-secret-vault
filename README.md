@@ -17,7 +17,9 @@
 
 ## 확인된 범위와 다음 단계
 
-- 변경 사항은 로컬 시험으로 검증할 수 있지만, 이 저장소에는 실제 Supabase·Vercel·GitHub 연결이 없습니다. SQL 실행, 배포, 실제 키를 이용한 요청은 수행하지 않았습니다.
-- 이 단계의 `npm run bundle`은 깨끗한 Git 커밋, 본인 GitHub `origin`, 실제 `aleph.config.json` 주소와 `bundle-notes.json` 설명, 실제 배포 자기 점검이 필요합니다. 이 값이 준비되지 않아 제출 JSON을 생성하지 않았습니다.
+- **2026-10-28 확인 기록:** Vercel 배포의 `/api/notes`에서 가상 메모 네 건이 반환되고, `/` 화면에도 카드 네 장이 표시됩니다. `/data.json`은 404입니다. `/`, `/index.html`, `/data.json`, `/aleph.json` 응답 본문에서 가상 메모 문구 검색 결과는 모두 0건이었습니다.
+- Vercel에 연결된 Supabase 프로젝트에서 `public.notes`의 메모 행 4건, `owner_id` 형식 `uuid`, 외래키 수 `0`, RLS 활성화 `true`를 확인했습니다. 비밀 키 값은 출력하거나 기록하지 않았습니다.
+- `/api/notes`는 로그인 없이 메모를 반환하므로 접근 보호가 완성된 것은 아닙니다. 과거 커밋과 옛 배포의 노출도 이번 단계로 해소되지 않았습니다.
+- `bundle-notes.json`과 `artifacts/submission.json`은 Git에서 무시되는 로컬 파일이며 커밋하지 않습니다. 번들 실행 결과는 실행 화면의 요약으로 확인합니다.
 - `npm run decider:test`와 `npm run detect:test`가 실행된다면 이는 가상 연습이며 운영 심판 판정이 아닙니다.
 - 다음 실행 명령: `npm test`를 실행하세요. 정상 결과는 시험 11건 모두 통과이며, 빌드는 `data.json`이 남았을 때 거부되어야 합니다.
