@@ -32,16 +32,12 @@ function fakeStore(initial = []) {
     const u = new URL(url);
     calls.push({ method: options.method, url: u, options });
     const eq = u.searchParams.get('id')?.replace(/^eq\./u, '');
+    const owner = u.searchParams.get('owner_id')?.replace(/^eq\./u, '');
+    const matches = row => (!eq || row.id === eq) && (!owner || row.owner_id === owner);
+    const out = ({ id, title, content, owner_id }) => ({ id, title, content, owner_id });
     const json = (status, body) => new Response(JSON.stringify(body), { status });
     if (options.method === 'GET') {
-      let found = rows;
-      if (eq) found = found.filter(row => row.id === eq);
-      const or = u.searchParams.get('or');
-      if (or) {
-        const owner = /owner_id\.eq\.([0-9a-f-]+)/u.exec(or)[1];
-        found = found.filter(row => row.owner_id === owner || row.owner_id === null);
-      }
-      return json(200, found.map(({ id, title, content }) => ({ id, title, content })));
+      return json(200, rows.filter(matches).map(out));
     }
     if (options.method === 'POST') {
       const row = JSON.parse(options.body);
@@ -49,15 +45,15 @@ function fakeStore(initial = []) {
       rows.push(row);
       return json(201, [row]);
     }
-    const index = rows.findIndex(row => row.id === eq);
+    const index = rows.findIndex(matches);
     if (options.method === 'PATCH') {
       if (index < 0) return json(200, []);
       Object.assign(rows[index], JSON.parse(options.body));
-      return json(200, [rows[index]]);
+      return json(200, [out(rows[index])]);
     }
     if (index < 0) return json(200, []);
     const [removed] = rows.splice(index, 1);
-    return json(200, [{ id: removed.id }]);
+    return json(200, [out(removed)]);
   };
   return { rows, calls, fetchImpl };
 }
@@ -108,7 +104,7 @@ test('허용하지 않는 방식은 405이고 Allow에 허용 방식을 알려 �
   assert.equal(store.calls.length, 0);
 });
 
-test('목록은 로그인 사용자의 메모와 주인 없는 가상 메모만 {id,title,body}로 돌려준다', async () => {
+test('목록은 로그인 사용자 본인의 메모만 {id,title,body}로 돌려준다', async () => {
   const store = fakeStore([
     { id: SEED, owner_id: null, title: '가상 제목', content: '가상 내용' },
     { id: '33333333-3333-4333-8333-333333333333', owner_id: USER_A, title: 'A 제목', content: 'A 내용' },
@@ -116,10 +112,12 @@ test('목록은 로그인 사용자의 메모와 주인 없는 가상 메모만 
   ]);
   const response = await call(store, { method: 'GET', headers: { authorization: 'Bearer A' } });
   assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.body.map(note => note.title), ['가상 제목', 'A 제목']);
+  assert.deepEqual(response.body.map(note => note.title), ['A 제목']);
   assert.deepEqual(Object.keys(response.body[0]).sort(), ['body', 'id', 'title']);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   const { options, url } = store.calls[0];
+  assert.equal(url.searchParams.get('owner_id'), `eq.${USER_A}`);
+  assert.equal(url.searchParams.has('or'), false);
   assert.equal(url.origin + url.pathname, 'https://project.supabase.co/rest/v1/notes');
   assert.equal(options.headers.apikey, configured.SUPABASE_SECRET_KEY);
   assert.equal(options.redirect, 'error');
@@ -170,7 +168,8 @@ test('추가·한 건 읽기·수정·삭제 흐름: 삭제 뒤 GET은 404', asy
   assert.deepEqual(updated.body, { id, title: '고침', body: '새 내용' });
   assert.equal(store.rows[0].owner_id, USER_A);
   const patch = store.calls.find(entry => entry.method === 'PATCH');
-  assert.deepEqual(Object.keys(JSON.parse(patch.options.body)).sort(), ['content', 'title']);
+  assert.deepEqual(JSON.parse(patch.options.body), { title: '고침', content: '새 내용', owner_id: USER_A });
+  assert.equal(patch.url.searchParams.get('owner_id'), `eq.${USER_A}`);
 
   const removed = await call(store, { method: 'DELETE', query: { id }, headers: auth });
   assert.equal(removed.statusCode, 200);
@@ -198,12 +197,77 @@ test('없는 id와 형식이 틀린 id는 404이고 형식이 틀린 id는 DB를
   assert.equal(store.calls.length, before);
 });
 
-test('3단계에는 소유자 검사가 없어 B가 A의 메모를 고칠 수 있다 (4단계에서 고칠 알려진 약점)', async () => {
+test('A/B는 상대 메모를 읽기·수정·삭제할 수 없고 404를 받으며 상대 행은 그대로다', async () => {
+  const idA = '77777777-7777-4777-8777-777777777777';
+  const idB = '88888888-8888-4888-8888-888888888888';
+  const store = fakeStore([
+    { id: idA, owner_id: USER_A, title: 'A 메모', content: 'A 내용' },
+    { id: idB, owner_id: USER_B, title: 'B 메모', content: 'B 내용' },
+  ]);
+  for (const [token, otherId] of [['B', idA], ['A', idB]]) {
+    const headers = { authorization: `Bearer ${token}` };
+    for (const method of ['GET', 'PUT', 'DELETE']) {
+      const response = await call(store, { method, query: { id: otherId }, headers, body: { title: '침입', body: 'x' } });
+      assert.equal(response.statusCode, 404, `${token} ${method}`);
+      assert.deepEqual(response.body, { error: 'NOT_FOUND' });
+    }
+    const list = await call(store, { method: 'GET', headers });
+    assert.deepEqual(list.body.map(note => note.id), [token === 'A' ? idA : idB]);
+  }
+  assert.deepEqual(store.rows.map(row => [row.title, row.owner_id]), [['A 메모', USER_A], ['B 메모', USER_B]]);
+});
+
+test('A/B는 각자 자기 메모를 읽기·추가·수정·삭제할 수 있다', async () => {
+  const store = fakeStore();
+  for (const [token, owner] of [['A', USER_A], ['B', USER_B]]) {
+    const headers = { authorization: `Bearer ${token}` };
+    const { statusCode, body: { id } } = await call(store, { method: 'POST', headers, body: { title: `${token} 새`, body: 'b' } });
+    assert.equal(statusCode, 201);
+    assert.equal(store.rows.find(row => row.id === id).owner_id, owner);
+    assert.equal((await call(store, { method: 'GET', query: { id }, headers })).statusCode, 200);
+    assert.equal((await call(store, { method: 'PUT', query: { id }, headers, body: { title: '고침', body: 'c' } })).statusCode, 200);
+    assert.equal((await call(store, { method: 'DELETE', query: { id }, headers })).statusCode, 200);
+  }
+  assert.equal(store.rows.length, 0);
+});
+
+test('수정 본문으로 주인을 바꾸려 하면 403이고 DB를 부르지 않는다', async () => {
   const id = '77777777-7777-4777-8777-777777777777';
   const store = fakeStore([{ id, owner_id: USER_A, title: 'A 메모', content: 'A 내용' }]);
-  const response = await call(store, { method: 'PUT', query: { id }, headers: { authorization: 'Bearer B' }, body: { title: 'B가 고침', body: 'x' } });
-  assert.equal(response.statusCode, 200);
-  assert.equal(store.rows[0].title, 'B가 고침');
+  const headers = { authorization: 'Bearer A' };
+  for (const key of ['owner_id', 'ownerId', 'userId', 'user_id']) {
+    const response = await call(store, { method: 'PUT', query: { id }, headers, body: { title: 't', body: 'b', [key]: USER_B } });
+    assert.equal(response.statusCode, 403);
+    assert.deepEqual(response.body, { error: 'OWNER_CHANGE_FORBIDDEN' });
+  }
+  assert.equal(store.calls.length, 0);
+  assert.equal(store.rows[0].owner_id, USER_A);
+  const same = await call(store, { method: 'PUT', query: { id }, headers, body: { title: 't', body: 'b', owner_id: USER_A } });
+  assert.equal(same.statusCode, 200);
+});
+
+test('URL 쿼리의 owner_id는 무시하고 검증된 사용자 번호로만 거른다', async () => {
+  const idA = '77777777-7777-4777-8777-777777777777';
+  const store = fakeStore([{ id: idA, owner_id: USER_A, title: 'A 메모', content: 'A 내용' }]);
+  const response = await call(store, { method: 'GET', query: { id: idA, owner_id: USER_A }, headers: { authorization: 'Bearer B' } });
+  assert.equal(response.statusCode, 404);
+  assert.equal(store.calls[0].url.searchParams.get('owner_id'), `eq.${USER_B}`);
+});
+
+test('다른 사람 메모의 id로 추가해도 덮어쓰지 않고 409다', async () => {
+  const idA = '77777777-7777-4777-8777-777777777777';
+  const store = fakeStore([{ id: idA, owner_id: USER_A, title: 'A 메모', content: 'A 내용' }]);
+  const response = await call(store, { method: 'POST', headers: { authorization: 'Bearer B' }, body: { id: idA, title: 'x', body: 'y' } });
+  assert.equal(response.statusCode, 409);
+  assert.deepEqual(store.rows[0], { id: idA, owner_id: USER_A, title: 'A 메모', content: 'A 내용' });
+});
+
+test('DB가 남의 행을 돌려주면 자료를 내주지 않고 502다', async () => {
+  const leaky = { fetchImpl: async () => new Response(JSON.stringify([
+    { id: '77777777-7777-4777-8777-777777777777', owner_id: USER_A, title: 'A', content: 'A' }]), { status: 200 }) };
+  const response = await call(leaky, { method: 'GET', headers: { authorization: 'Bearer B' } });
+  assert.equal(response.statusCode, 502);
+  assert.deepEqual(response.body, { error: 'NOTES_UPSTREAM_FAILED' });
 });
 
 test('DB 설정이 없거나 DB가 실패해도 고정 오류만 돌려주고 비밀 키를 싣지 않는다', async () => {

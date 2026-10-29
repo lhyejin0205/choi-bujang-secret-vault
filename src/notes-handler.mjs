@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
 // 자료 API. 모든 요청은 먼저 verifyLogin(src/verify-login.mjs)으로 토큰을 검사합니다.
-// 사용자 번호는 검사를 통과한 토큰에서만 얻습니다. 요청 본문의 userId·role·owner_id는 읽지 않습니다.
+// 사용자 번호는 검사를 통과한 토큰에서만 얻습니다. URL·본문의 userId·role·owner_id는 믿지 않습니다.
+// 4단계: 읽기·추가·수정·삭제 모두 검증된 사용자 번호와 DB의 owner_id가 같을 때만 허용합니다.
+// 남의 메모는 없는 메모와 똑같이 404로 답해, 그런 id가 있는지도 알려 주지 않습니다.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const MAX_TITLE = 200;
 const MAX_BODY = 5000;
@@ -48,6 +50,10 @@ function noteFields(body) {
 
 const validRow = row => row && typeof row === 'object' && UUID.test(row.id ?? '')
   && typeof row.title === 'string' && typeof row.content === 'string';
+// 본문에 주인을 바꾸려는 값이 들어 있는지 봅니다. 값은 쓰지 않고, 본인이 아니면 거부에만 씁니다.
+const OWNER_KEYS = ['owner_id', 'ownerId', 'userId', 'user_id'];
+const triesOtherOwner = (body, userId) => OWNER_KEYS.some(key => body
+  && Object.hasOwn(body, key) && body[key] !== userId);
 const noteOut = row => ({ id: row.id, title: row.title, body: row.content });
 
 export async function handleNotesRequest(request, response, options = {}) {
@@ -90,24 +96,25 @@ export async function handleNotesRequest(request, response, options = {}) {
     });
   };
   const fail = () => sendJson(response, 502, { error: 'NOTES_UPSTREAM_FAILED' });
+  // DB가 돌려준 행도 다시 확인합니다. 주인이 본인이 아닌 행이 섞이면 자료를 내주지 않습니다.
   const readRows = async (result) => {
     const rows = await result.json();
-    return Array.isArray(rows) && rows.every(validRow) ? rows : null;
+    return Array.isArray(rows) && rows.every(row => validRow(row) && row.owner_id === user.userId)
+      ? rows : null;
   };
-  const select = 'id,title,content';
+  const select = 'id,title,content,owner_id';
+  const mine = { owner_id: `eq.${user.userId}` };
 
   try {
-    // 목록: 로그인 사용자의 메모와 주인이 없는 가상 메모
+    // 목록: 로그인 사용자 본인의 메모만
     if (id === undefined && request.method === 'GET') {
-      const result = await upstream('GET', {
-        select, order: 'id.asc', or: `(owner_id.eq.${user.userId},owner_id.is.null)`,
-      });
+      const result = await upstream('GET', { select, order: 'id.asc', ...mine });
       if (!result.ok) return fail();
       const rows = await readRows(result);
       return rows ? sendJson(response, 200, rows.map(noteOut)) : fail();
     }
 
-    // 추가: 주인은 서버가 확인한 사용자 번호로만 저장합니다.
+    // 추가: 주인은 서버가 확인한 사용자 번호로만 저장합니다. 본문의 owner_id·userId는 쓰지 않습니다.
     if (id === undefined && request.method === 'POST') {
       const body = jsonBody(request);
       const fields = noteFields(body);
@@ -118,6 +125,7 @@ export async function handleNotesRequest(request, response, options = {}) {
       const result = await upstream('POST', {}, {
         id: wantedId ?? randomUUID(), owner_id: user.userId, ...fields,
       }, 'return=representation');
+      // 다른 사람 메모의 id를 골라 보내도 덮어쓰지 않고 409로 끝납니다.
       if (result.status === 409) return sendJson(response, 409, { error: 'ID_ALREADY_EXISTS' });
       if (!result.ok) return fail();
       const rows = await readRows(result);
@@ -126,7 +134,8 @@ export async function handleNotesRequest(request, response, options = {}) {
 
     // 한 건: 형식이 맞지 않는 id는 없는 메모와 같게 404로 답합니다.
     if (!UUID.test(id)) return sendJson(response, 404, { error: 'NOT_FOUND' });
-    const target = { id: `eq.${id}` };
+    // 한 건 요청은 항상 "이 id이면서 주인이 본인인 행"만 대상으로 합니다.
+    const target = { id: `eq.${id}`, ...mine };
 
     if (request.method === 'GET') {
       const result = await upstream('GET', { select, limit: '1', ...target });
@@ -137,9 +146,14 @@ export async function handleNotesRequest(request, response, options = {}) {
     }
 
     if (request.method === 'PUT') {
-      const fields = noteFields(jsonBody(request));
+      const body = jsonBody(request);
+      const fields = noteFields(body);
       if (!fields) return sendJson(response, 400, { error: 'INVALID_BODY' });
-      const result = await upstream('PATCH', { select, ...target }, fields, 'return=representation');
+      // 주인 바꾸기는 거부합니다.
+      if (triesOtherOwner(body, user.userId)) return sendJson(response, 403, { error: 'OWNER_CHANGE_FORBIDDEN' });
+      // 기존 행: 필터로 본인 행만 고릅니다. 새 행: owner_id를 본인으로 다시 적고, 돌려받은 행도 확인합니다.
+      const result = await upstream('PATCH', { select, ...target },
+        { ...fields, owner_id: user.userId }, 'return=representation');
       if (!result.ok) return fail();
       const rows = await readRows(result);
       if (!rows) return fail();
@@ -147,10 +161,10 @@ export async function handleNotesRequest(request, response, options = {}) {
     }
 
     // DELETE
-    const result = await upstream('DELETE', { select: 'id', ...target }, undefined, 'return=representation');
+    const result = await upstream('DELETE', { select, ...target }, undefined, 'return=representation');
     if (!result.ok) return fail();
-    const rows = await result.json();
-    if (!Array.isArray(rows)) return fail();
+    const rows = await readRows(result);
+    if (!rows) return fail();
     return rows.length ? sendJson(response, 200, { id }) : sendJson(response, 404, { error: 'NOT_FOUND' });
   } catch {
     return fail();

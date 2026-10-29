@@ -57,10 +57,24 @@ async function checkLoginRequired(app) {
   ];
 }
 
+// 4단계: B가 A의 메모를 읽기·수정·삭제·주인 바꾸기 하는 시도입니다.
+// 두 계정의 로그인 토큰이 필요해 이 자기 점검에서는 보내지 않고 미실행으로 남깁니다.
+const OWNER_ATTACKS = [
+  ['b_reads_a_note', 'B 로그인으로 A 메모 id를 GET /api/notes/:id'],
+  ['b_updates_a_note', 'B 로그인으로 A 메모 id를 PUT /api/notes/:id'],
+  ['b_deletes_a_note', 'B 로그인으로 A 메모 id를 DELETE /api/notes/:id'],
+  ['a_changes_owner', 'A 로그인으로 자기 메모의 owner_id를 B로 바꾸는 PUT'],
+];
+const notSent = '미실행. A·B 계정 토큰이 필요해 이 점검에서는 보내지 않음';
+
 export async function runAttackChecks(config) {
-  if (![1, 2, 3].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 2, 3, 4].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
+  if (config.step === 4) {
+    return [...await checkLoginRequired(app),
+      ...OWNER_ATTACKS.map(([attackId, expected]) => ({ attackId, expected, observed: notSent }))];
+  }
   if (config.step === 1 && (typeof config.sampleMarker !== 'string' || !config.sampleMarker)) {
     throw new Error('가상 메모의 확인 표시를 넣어 주세요.');
   }

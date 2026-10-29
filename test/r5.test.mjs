@@ -105,7 +105,25 @@ test('step 3 attack check sends only anonymous and forged-token requests and rec
     const leaked = await runAttackChecks({ ...config, step: 3 });
     assert.match(leaked[0].observed, /자료가 반환됨/u);
     assert.match(leaked[1].observed, /받아들여짐/u);
-    await assert.rejects(() => runAttackChecks({ ...config, step: 4 }));
+    await assert.rejects(() => runAttackChecks({ ...config, step: 5 }));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('step 4 attack check keeps the anonymous checks and leaves owner attacks as not sent', async () => {
+  const originalFetch = globalThis.fetch;
+  const sent = [];
+  try {
+    globalThis.fetch = async (url, init) => {
+      sent.push({ method: init.method, hasAuth: Boolean(init.headers?.authorization) });
+      return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401 });
+    };
+    const results = await runAttackChecks({ ...config, step: 4 });
+    assert.deepEqual(sent.map(({ method, hasAuth }) => [method, hasAuth]), [['GET', false], ['POST', false], ['GET', true]]);
+    assert.deepEqual(results.map(item => item.attackId), ['anonymous_notes_read', 'anonymous_notes_create',
+      'forged_token_notes_read', 'login_a_notes_read', 'b_reads_a_note', 'b_updates_a_note', 'b_deletes_a_note', 'a_changes_owner']);
+    for (const item of results.slice(4)) assert.match(item.observed, /^미실행/u);
   } finally {
     globalThis.fetch = originalFetch;
   }
