@@ -30,7 +30,6 @@
     li span { color: #bfd0e5; white-space: pre-wrap; }
     [hidden] { display: none !important; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
 </head>
 <body>
   <main>
@@ -64,26 +63,36 @@
     </section>
   </main>
   <script type="module">
-    // 공개용 값입니다. 비밀 키는 이 파일에 넣지 않습니다.
-    const SUPABASE_URL = 'https://fcmjfhjbsaqggxmmjbjo.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Yj44a38Yz-KGLrwgRuN53w_D0VAAgG9';
+    // 이 화면은 Supabase 주소나 키를 갖고 있지 않습니다. 로그인·로그아웃·자료는 모두 서버 함수로 갑니다.
     const $ = (selector) => document.querySelector(selector);
     const loginError = $('#login-error');
     const notesError = $('#notes-error');
     const list = $('#notes');
 
-    if (!window.supabase) {
-      loginError.textContent = '로그인 도구를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로 고침해 주세요.';
-      $('#login-form button').disabled = true;
-      throw new Error('supabase-js not loaded');
+    // 접근 토큰은 이 탭에서만 기억합니다(창을 닫으면 사라짐). 저장이 막힌 브라우저에서는 메모리에만 둡니다.
+    const SESSION_KEY = 'byteback.session';
+    let memorySession = null;
+    function readSession() {
+      let session = memorySession;
+      try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') ?? memorySession; } catch { /* 메모리 값 사용 */ }
+      if (!session || typeof session.accessToken !== 'string' || !(session.expiresAt > Date.now())) return null;
+      return session;
     }
-    const auth = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY).auth;
+    function writeSession(session) {
+      memorySession = session;
+      try {
+        if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        else sessionStorage.removeItem(SESSION_KEY);
+      } catch { /* 메모리 값만 사용 */ }
+    }
 
     const loginReasons = {
-      invalid_credentials: '이메일 또는 비밀번호가 맞지 않습니다.',
-      email_not_confirmed: '이메일 인증이 아직 끝나지 않았습니다. 받은 편지함의 인증 메일을 확인해 주세요.',
-      over_request_rate_limit: '시도가 너무 많습니다. 잠시 뒤에 다시 시도해 주세요.',
-      user_banned: '이 계정은 사용할 수 없습니다.',
+      INVALID_CREDENTIALS: '이메일 또는 비밀번호가 맞지 않습니다.',
+      EMAIL_NOT_CONFIRMED: '이메일 인증이 아직 끝나지 않았습니다. 받은 편지함의 인증 메일을 확인해 주세요.',
+      RATE_LIMITED: '시도가 너무 많습니다. 잠시 뒤에 다시 시도해 주세요.',
+      USER_BANNED: '이 계정은 사용할 수 없습니다.',
+      INVALID_BODY: '이메일과 비밀번호를 모두 입력해 주세요.',
+      AUTH_NOT_CONFIGURED: '로그인 설정이 아직 끝나지 않았습니다. 관리자에게 알려 주세요.',
     };
     const apiReasons = {
       UNAUTHORIZED: '로그인이 필요하거나 로그인이 만료되었습니다. 다시 로그인해 주세요.',
@@ -92,14 +101,14 @@
     };
 
     async function api(path, options = {}) {
-      const { data } = await auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) throw new Error(apiReasons.UNAUTHORIZED);
+      const session = readSession();
+      if (!session) { writeSession(null); render(null); throw new Error(apiReasons.UNAUTHORIZED); }
       const response = await fetch(path, {
         ...options, cache: 'no-store',
-        headers: { ...(options.body ? { 'content-type': 'application/json' } : {}), authorization: `Bearer ${token}` },
+        headers: { ...(options.body ? { 'content-type': 'application/json' } : {}), authorization: `Bearer ${session.accessToken}` },
       });
       const result = await response.json().catch(() => null);
+      if (response.status === 401) { writeSession(null); render(null); }
       if (!response.ok) throw new Error(apiReasons[result?.error] ?? `요청이 실패했습니다. (HTTP ${response.status})`);
       return result;
     }
@@ -179,7 +188,7 @@
       const signedIn = Boolean(session);
       $('#signed-out').hidden = signedIn;
       $('#signed-in').hidden = !signedIn;
-      $('#who').textContent = session?.user?.email ?? '';
+      $('#who').textContent = session?.email ?? '';
       if (!signedIn) { list.replaceChildren(); notesError.textContent = ''; }
     }
 
@@ -189,16 +198,40 @@
       const email = $('#email').value.trim();
       const password = $('#password').value;
       if (!email || !password) { loginError.textContent = '이메일과 비밀번호를 모두 입력해 주세요.'; return; }
-      const { error } = await auth.signInWithPassword({ email, password });
-      $('#password').value = '';
-      if (error) {
-        loginError.textContent = loginReasons[error.code]
-          ?? (error.status === 0 || /fetch/iu.test(error.message) ? '네트워크 연결을 확인해 주세요.'
-            : `로그인하지 못했습니다: ${error.message}`);
+      let response;
+      let result = null;
+      try {
+        response = await fetch('/api/login', {
+          method: 'POST', cache: 'no-store',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        result = await response.json().catch(() => null);
+      } catch {
+        loginError.textContent = '네트워크 연결을 확인해 주세요.';
+        return;
+      } finally {
+        $('#password').value = '';
       }
+      if (!response.ok || typeof result?.accessToken !== 'string') {
+        loginError.textContent = loginReasons[result?.error] ?? `로그인하지 못했습니다. (HTTP ${response.status})`;
+        return;
+      }
+      writeSession({ accessToken: result.accessToken, expiresAt: result.expiresAt, email: result.email });
+      render(readSession());
+      await loadNotes();
     });
 
-    $('#logout').addEventListener('click', async () => { await auth.signOut(); });
+    $('#logout').addEventListener('click', async () => {
+      const session = readSession();
+      writeSession(null);
+      render(null);
+      if (session) {
+        await fetch('/api/logout', {
+          method: 'POST', cache: 'no-store', headers: { authorization: `Bearer ${session.accessToken}` },
+        }).catch(() => {});
+      }
+    });
     $('#add-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       try {
@@ -210,11 +243,10 @@
       } catch (error) { notesError.textContent = error.message; }
     });
 
-    // 로그인 상태가 바뀔 때마다 화면을 바꿉니다. 콜백 안에서는 supabase 호출을 기다리지 않습니다.
-    auth.onAuthStateChange((event, session) => {
-      render(session);
-      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) setTimeout(loadNotes, 0);
-    });
+    // 처음 열 때: 이 탭에 남은 토큰이 있으면 로그인 화면을 건너뜁니다.
+    const initial = readSession();
+    render(initial);
+    if (initial) loadNotes();
   </script>
 </body>
 </html>

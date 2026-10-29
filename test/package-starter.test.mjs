@@ -58,9 +58,11 @@ test('5단계 설정은 로그인 발급자, 실제 자료 API 경로, 원본 �
   assert.equal(config.identityProvider.jwksUrl, `${config.identityProvider.issuer}/.well-known/jwks.json`);
   assert.equal(config.identityProvider.audience, 'authenticated');
   assert.deepEqual(config.allowedRoutes, ['GET /api/notes', 'POST /api/notes', 'GET /api/notes/:id',
-    'PUT /api/notes/:id', 'DELETE /api/notes/:id']);
+    'PUT /api/notes/:id', 'DELETE /api/notes/:id', 'POST /api/login', 'POST /api/logout']);
   assert.equal(/sb_secret_|service_role/u.test(JSON.stringify(config)), false);
-  assert.deepEqual(vercel.rewrites, [{ source: '/api/notes/:id', destination: '/api/notes?id=:id' }]);
+  assert.deepEqual(vercel.rewrites, [{ source: '/api/notes/:id', destination: '/api/notes?id=:id' },
+    { source: '/api/login', destination: '/api/notes?session=login' },
+    { source: '/api/logout', destination: '/api/notes?session=logout' }]);
   assert.match(readme, /\/api\/notes/u);
   assert.match(readme, /SUPABASE_SECRET_KEY/u);
   assert.match(readme, /verify-login/u);

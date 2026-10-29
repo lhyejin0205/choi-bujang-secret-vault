@@ -1,6 +1,5 @@
 // The student changes this check as each stage adds an attack to the same app.
 // Never return tokens, private keys, real names, or note bodies.
-import { readFile } from 'node:fs/promises';
 function appUrl(config) {
   let app;
   try {
@@ -68,8 +67,9 @@ const OWNER_ATTACKS = [
 ];
 const notSent = '미실행. A·B 계정 토큰이 필요해 이 점검에서는 보내지 않음';
 
-// 5단계: 화면 코드에 공개된 publishable(anon) 키로 원본 자료 API를 직접 불러 실제 응답을 기록합니다.
-// 키는 이미 공개된 값이지만 결과에는 싣지 않고, 메모 본문도 싣지 않습니다.
+// 5단계: 공개용 publishable(anon) 키로 원본 자료 API를 직접 불러 실제 응답을 기록합니다.
+// 화면 코드에는 이제 키가 없으므로, bundle을 실행할 때 환경변수 SUPABASE_PUBLISHABLE_KEY로 받습니다.
+// 키가 없으면 요청을 보내지 않고 미실행으로 남깁니다. 키와 메모 본문은 결과에 싣지 않습니다.
 function originalUrl(config) {
   let url;
   try {
@@ -84,16 +84,24 @@ function originalUrl(config) {
   return url;
 }
 
-async function publishableKey() {
-  const html = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
-  const match = /['"](sb_publishable_[A-Za-z0-9_-]{10,})['"]/u.exec(html);
-  if (!match) throw new Error('public/index.html에서 공개용 publishable key를 찾지 못했습니다.');
-  return match[1];
+function publishableKey(env) {
+  const key = env.SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!key) return null;
+  if (!/^sb_publishable_[A-Za-z0-9_-]{10,}$/u.test(key)) {
+    throw new Error('SUPABASE_PUBLISHABLE_KEY에는 sb_publishable_로 시작하는 공개용 키만 넣어 주세요.');
+  }
+  return key;
 }
 
-async function checkOriginalApiClosed(config) {
+const ORIGINAL_EXPECTED = 'anon 키로 원본 자료 API(/rest/v1/notes)에서 메모를 직접 확인';
+
+async function checkOriginalApiClosed(config, env) {
   const url = originalUrl(config);
-  const key = await publishableKey();
+  const key = publishableKey(env);
+  if (!key) {
+    return { attackId: 'anon_original_api_read', expected: ORIGINAL_EXPECTED,
+      observed: '미실행. SUPABASE_PUBLISHABLE_KEY 없이 실행해 이 점검에서는 보내지 않음' };
+  }
   const probe = new URL(url);
   probe.searchParams.set('select', 'id');
   probe.searchParams.set('limit', '1');
@@ -109,18 +117,18 @@ async function checkOriginalApiClosed(config) {
     leaked = false;
   }
   return {
-    attackId: 'anon_original_api_read', expected: 'anon 키로 원본 자료 API(/rest/v1/notes)에서 메모를 직접 확인',
+    attackId: 'anon_original_api_read', expected: ORIGINAL_EXPECTED,
     observed: leaked ? `anon 키 직접 요청에서 자료가 반환됨 (HTTP ${response.status})`
       : `anon 키 직접 요청에서 자료가 반환되지 않음 (HTTP ${response.status})`,
   };
 }
 
-export async function runAttackChecks(config) {
+export async function runAttackChecks(config, env = process.env) {
   if (![1, 2, 3, 4, 5].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
   if (config.step === 5) {
-    return [...await checkLoginRequired(app), await checkOriginalApiClosed(config),
+    return [...await checkLoginRequired(app), await checkOriginalApiClosed(config, env),
       ...OWNER_ATTACKS.map(([attackId, expected]) => ({ attackId, expected, observed: notSent }))];
   }
   if (config.step === 4) {

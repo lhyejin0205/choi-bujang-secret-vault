@@ -4,7 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "rewrites": [
-    { "source": "/api/notes/:id", "destination": "/api/notes?id=:id" }
+    { "source": "/api/notes/:id", "destination": "/api/notes?id=:id" },
+    { "source": "/api/login", "destination": "/api/notes?session=login" },
+    { "source": "/api/logout", "destination": "/api/notes?session=logout" }
   ],
   "headers": [
     {
