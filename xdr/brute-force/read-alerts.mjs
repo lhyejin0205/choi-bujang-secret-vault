@@ -57,7 +57,7 @@ function main() {
   for (const r of rows) {
     console.log(`${r.time} | ${r.srcip} | ${r.user} | 수준 ${r.level} | ${r.description}`);
   }
-  console.log(`경보 ${alertCount}건, 뽑은 줄 ${rows.length}줄` +
+  console.error(`경보 ${alertCount}건, 뽑은 줄 ${rows.length}줄` +
     (hiddenCount ? `, 비밀값처럼 보이는 값 ${hiddenCount}건은 출력하지 않음` : ''));
   if (alertCount !== rows.length) {
     console.error('경보 건수와 뽑은 줄 수가 다릅니다.');
