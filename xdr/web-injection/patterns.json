@@ -1,0 +1,48 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "web-injection",
+  "source": "MITRE ATT&CK T1190 Exploit Public-Facing Application",
+  "thresholds": { "block": 0.85, "alert": 0.5 },
+  "levelBoost": { "minLevel": 10, "add": 0.03 },
+  "countTiers": [
+    { "minCount": 8, "score": 0.88 },
+    { "minCount": 3, "score": 0.7 },
+    { "minCount": 1, "score": 0.55 }
+  ],
+  "urlMarkerMinScore": 0.7,
+  "floor": {
+    "name": "t1190-tag-only",
+    "score": 0.5,
+    "note": "패턴이 아니라 알림 하한선입니다. Wazuh 가 T1190 으로 분류했지만 아래 패턴 표기가 보이지 않는 경보는 record 로 흘리지 않고 alert 로 남깁니다."
+  },
+  "patterns": [
+    {
+      "name": "sql-fragment-in-request",
+      "condition": "경보가 T1190 으로 분류되고, 경보 설명에 SQL 구문 표기(SQL, 데이터베이스 조회, select, 따옴표)가 있거나 요청 주소 인자에 SQL 구문이 있다. 반복 횟수(count)가 8회 이상이면 뚜렷, 3회 이상이면 의심, 1회는 약하다.",
+      "evidence": "MITRE ATT&CK T1190: 공개된 앱의 입력 처리 약점을 노려 요청 인자에 SQL 구문을 끼워 넣는 SQL 주입은 T1190 의 대표 악용 사례(APT39 등)로 올라 있다.",
+      "descriptionKeywords": ["SQL", "데이터베이스 조회", "select", "따옴표"],
+      "urlRegex": "('|%27)(\\s|\\+|%20)*(or|and)(\\s|\\+|%20)+\\d+\\s*=\\s*\\d+|union(\\s|\\+|%20)+select|(;|%3b)(\\s|\\+|%20)*drop(\\s|\\+|%20)"
+    },
+    {
+      "name": "script-tag-in-request",
+      "condition": "경보가 T1190 으로 분류되고, 경보 설명에 스크립트 삽입 표기가 있거나 요청 주소 인자에 스크립트 태그가 있다. 반복 횟수 기준은 위와 같다.",
+      "evidence": "MITRE ATT&CK T1190: 공개된 앱이 입력 값을 검증하지 못하는 약점을 노려 요청 인자에 스크립트 태그를 끼워 넣는 것은 웹 앱 약점 악용의 한 형태다(T1190 항목에는 SQL 주입·명령 주입·경로 순회 사례가 직접 올라 있고, 스크립트 삽입은 일반적인 웹 앱 약점 분류에 따른다).",
+      "descriptionKeywords": ["스크립트"],
+      "urlRegex": "<script|%3cscript"
+    },
+    {
+      "name": "path-traversal-repeat",
+      "condition": "경보가 T1190 으로 분류되고, 경보 설명에 경로를 거슬러 올라가는(경로 이탈) 표기가 있거나 요청 주소에 ../ 가 두 번 이상 반복된다. 반복 횟수 기준은 위와 같다.",
+      "evidence": "MITRE ATT&CK T1190: 공개된 앱의 경로 처리 약점을 노려 ../ 를 반복해 허용 범위 밖 파일에 닿는 경로 순회(디렉터리 순회)는 T1190 사례(APT41 의 C0017 등)로 올라 있다.",
+      "descriptionKeywords": ["거슬러 올라가", "경로 이탈", "../"],
+      "urlRegex": "(\\.\\./|%2e%2e%2f|\\.\\.%2f){2,}"
+    },
+    {
+      "name": "command-separator-in-request",
+      "condition": "경보가 T1190 으로 분류되고, 경보 설명에 명령 구분자 표기가 있거나 요청 주소 인자에 명령 구분자 뒤 셸 명령이 있다. 반복 횟수 기준은 위와 같다. (요청하신 세 신호 밖에서 시험 경보 wi-06 때문에 추가한 패턴입니다.)",
+      "evidence": "MITRE ATT&CK T1190: 공개된 앱의 입력 처리 약점으로 서버에 명령을 실행시키는 명령 주입은 T1190 사례(Ivanti Connect Secure 악용 등)로 올라 있다.",
+      "descriptionKeywords": ["명령 구분자", "구분 문자"],
+      "urlRegex": "(;|\\|\\||&&|%3b|%7c%7c|%26%26)\\s*(cat|ls|id|whoami|wget|curl)\\b"
+    }
+  ]
+}

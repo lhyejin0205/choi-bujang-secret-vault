@@ -5,6 +5,13 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { decide } from './decide.mjs';
 
+// 운영자가 지정한 주소만 차단에서 제외합니다. 판정 결과에서 추론하지 않습니다.
+const ALLOWLIST_FILE = fileURLToPath(new URL('../allowlist.json', import.meta.url));
+function loadAllowlist() {
+  if (!existsSync(ALLOWLIST_FILE)) return new Set();
+  return new Set(JSON.parse(readFileSync(ALLOWLIST_FILE, 'utf8')).ips ?? []);
+}
+
 const FIXTURE_FILE = fileURLToPath(new URL('../fixtures/brute-force.json', import.meta.url));
 const RULES_FILE = fileURLToPath(new URL('../deny-rules.json', import.meta.url));
 const LOG_FILE = fileURLToPath(new URL('../alerts.log', import.meta.url));
@@ -28,14 +35,15 @@ export function isDenied(rules, srcip, now = new Date()) {
   return rules.some((r) => r.srcip === srcip && Date.parse(r.expiresAt) > now.getTime());
 }
 
-// 차단 후보만 규칙으로 만듭니다. 정상 이벤트를 낸 주소와 T1110 표시가 없는 경보는 규칙에 넣지 않습니다.
+// 차단 후보만 규칙으로 만듭니다. 허용 목록(xdr/allowlist.json)에 있는 주소와 T1110 표시가 없는 경보는 규칙에 넣지 않습니다.
 export function buildRules(alerts, existingRules = [], now = new Date()) {
   const results = alerts.map((alert) => ({ alert, d: decide(alert) }));
-  const normalIps = new Set(
-    results.filter((r) => r.d.action === 'record').map((r) => r.alert.data?.srcip).filter(Boolean),
-  );
-  const bySrc = new Map(
-    existingRules.filter((r) => Date.parse(r.expiresAt) > now.getTime()).map((r) => [r.srcip, r]),
+  const normalIps = loadAllowlist();
+  // 이 모듈이 만든 규칙(xdr-bf-)만 다루고, 다른 모듈·운영자 규칙은 그대로 돌려줍니다.
+  const isOwnBf = (r) => typeof r?.id === 'string' && r.id.startsWith('xdr-bf-');
+  const others = existingRules.filter((r) => !isOwnBf(r));
+  const own = new Map(
+    existingRules.filter((r) => isOwnBf(r) && Date.parse(r.expiresAt) > now.getTime()).map((r) => [r.id, r]),
   );
   const skipped = [];
   for (const { alert, d } of results) {
@@ -45,9 +53,10 @@ export function buildRules(alerts, existingRules = [], now = new Date()) {
       skipped.push(alert.id);
       continue;
     }
-    const prev = bySrc.get(ip);
-    bySrc.set(ip, {
-      id: `xdr-bf-${ip}`,
+    const id = `xdr-bf-${ip}`;
+    const prev = own.get(id);
+    own.set(id, {
+      id,
       action: 'deny',
       srcip: ip,
       alertIds: [...new Set([...(prev?.alertIds ?? []), alert.id])],
@@ -57,7 +66,7 @@ export function buildRules(alerts, existingRules = [], now = new Date()) {
       expiresAt: new Date(now.getTime() + TTL_MS).toISOString(),
     });
   }
-  return { results, rules: [...bySrc.values()], skipped };
+  return { results, rules: [...others, ...own.values()], skipped };
 }
 
 // block·alert 만 알림으로 남기고, 이미 쓴 (경보 번호, 행동) 은 다시 쓰지 않습니다.
