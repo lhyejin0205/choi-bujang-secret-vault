@@ -169,11 +169,23 @@
       "action": "record",
       "confidence": 0.05,
       "reason": "일치하는 패턴 없음: T1110 표시가 없는 이벤트"
+    },
+    {
+      "alertId": "bf-90",
+      "action": "block",
+      "confidence": 0.98,
+      "reason": "repeated-login-failure: 로그인 실패 30건"
+    },
+    {
+      "alertId": "bf-91",
+      "action": "record",
+      "confidence": 0.05,
+      "reason": "일치하는 패턴 없음: T1110 표시가 없는 이벤트"
     }
   ],
   "counts": {
-    "block": 10,
+    "block": 11,
     "alert": 9,
-    "record": 9
+    "record": 10
   }
 }
