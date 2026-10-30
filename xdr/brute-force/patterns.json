@@ -1,0 +1,36 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "brute-force",
+  "source": "MITRE ATT&CK T1110 Brute Force",
+  "thresholds": { "block": 0.85, "alert": 0.5 },
+  "levelBoost": { "minLevel": 10, "add": 0.03 },
+  "patterns": [
+    {
+      "name": "repeated-login-failure",
+      "condition": "경보가 T1110 으로 분류되고, 같은 주소에서 짧은 시간에 로그인 실패가 연속으로 쌓였다. 실패 건수(count)가 3건 이상이면 의심, 10건 이상이면 뚜렷, 30건 이상이면 매우 뚜렷하다.",
+      "evidence": "MITRE ATT&CK T1110.001 Password Guessing: 공격자가 비밀번호를 반복해 추측하므로 같은 주소·계정에서 로그인 실패가 짧은 시간에 몰린다.",
+      "params": {
+        "failureTiers": [
+          { "minCount": 30, "score": 0.95 },
+          { "minCount": 10, "score": 0.88 },
+          { "minCount": 5, "score": 0.65 },
+          { "minCount": 3, "score": 0.55 }
+        ],
+        "successAfterFailurePenalty": 0.05
+      }
+    },
+    {
+      "name": "password-spraying",
+      "condition": "경보가 T1110 으로 분류되고, 같은 비밀번호를 여러 계정에 연속으로 넣었다. 계정이 5개 이상이면 뚜렷, 2개 이상이면 의심이고, 계정 수를 알 수 없으면 약하게 본다.",
+      "evidence": "MITRE ATT&CK T1110.003 Password Spraying: 계정 잠금을 피하려고 흔한 비밀번호 하나를 여러 계정에 돌려 가며 대입한다.",
+      "params": {
+        "accountTiers": [
+          { "minAccounts": 5, "score": 0.9 },
+          { "minAccounts": 2, "score": 0.7 }
+        ],
+        "unknownAccountsScore": 0.6,
+        "successAfterFailurePenalty": 0.05
+      }
+    }
+  ]
+}

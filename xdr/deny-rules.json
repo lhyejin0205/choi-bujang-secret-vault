@@ -1,0 +1,114 @@
+{
+  "schema": "aleph.xdr.deny-rules.v1",
+  "rules": [
+    {
+      "id": "xdr-bf-203.0.113.10",
+      "action": "deny",
+      "srcip": "203.0.113.10",
+      "alertIds": [
+        "bf-01",
+        "bf-02"
+      ],
+      "reason": "password-spraying: 계정 8개에 같은 비밀번호",
+      "confidence": 0.98,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    },
+    {
+      "id": "xdr-bf-198.51.100.20",
+      "action": "deny",
+      "srcip": "198.51.100.20",
+      "alertIds": [
+        "bf-03"
+      ],
+      "reason": "repeated-login-failure: 로그인 실패 36건",
+      "confidence": 0.98,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    },
+    {
+      "id": "xdr-bf-192.0.2.30",
+      "action": "deny",
+      "srcip": "192.0.2.30",
+      "alertIds": [
+        "bf-04"
+      ],
+      "reason": "repeated-login-failure: 로그인 실패 52건",
+      "confidence": 0.98,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    },
+    {
+      "id": "xdr-bf-203.0.113.21",
+      "action": "deny",
+      "srcip": "203.0.113.21",
+      "alertIds": [
+        "bf-05"
+      ],
+      "reason": "repeated-login-failure: 로그인 실패 20건",
+      "confidence": 0.91,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    },
+    {
+      "id": "xdr-bf-198.51.100.44",
+      "action": "deny",
+      "srcip": "198.51.100.44",
+      "alertIds": [
+        "bf-06"
+      ],
+      "reason": "repeated-login-failure: 로그인 실패 61건",
+      "confidence": 0.98,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    },
+    {
+      "id": "xdr-bf-203.0.113.15",
+      "action": "deny",
+      "srcip": "203.0.113.15",
+      "alertIds": [
+        "bf-07"
+      ],
+      "reason": "repeated-login-failure: 로그인 실패 40건",
+      "confidence": 0.98,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    },
+    {
+      "id": "xdr-bf-192.0.2.18",
+      "action": "deny",
+      "srcip": "192.0.2.18",
+      "alertIds": [
+        "bf-08"
+      ],
+      "reason": "repeated-login-failure: 로그인 실패 70건",
+      "confidence": 0.98,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    },
+    {
+      "id": "xdr-bf-198.51.100.8",
+      "action": "deny",
+      "srcip": "198.51.100.8",
+      "alertIds": [
+        "bf-09"
+      ],
+      "reason": "password-spraying: 계정 15개에 같은 비밀번호",
+      "confidence": 0.93,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    },
+    {
+      "id": "xdr-bf-203.0.113.40",
+      "action": "deny",
+      "srcip": "203.0.113.40",
+      "alertIds": [
+        "bf-10"
+      ],
+      "reason": "repeated-login-failure: 로그인 실패 90건",
+      "confidence": 0.98,
+      "createdAt": "2026-10-30T06:56:44.420Z",
+      "expiresAt": "2026-10-30T07:56:44.420Z"
+    }
+  ]
+}

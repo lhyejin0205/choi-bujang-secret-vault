@@ -1,0 +1,19 @@
+2026-10-30T06:56:44.420Z | block | bf-01 | 203.0.113.10 | 0.98 | repeated-login-failure: 로그인 실패 48건
+2026-10-30T06:56:44.420Z | block | bf-02 | 203.0.113.10 | 0.93 | password-spraying: 계정 8개에 같은 비밀번호
+2026-10-30T06:56:44.420Z | block | bf-03 | 198.51.100.20 | 0.98 | repeated-login-failure: 로그인 실패 36건
+2026-10-30T06:56:44.420Z | block | bf-04 | 192.0.2.30 | 0.98 | repeated-login-failure: 로그인 실패 52건
+2026-10-30T06:56:44.420Z | block | bf-05 | 203.0.113.21 | 0.91 | repeated-login-failure: 로그인 실패 20건
+2026-10-30T06:56:44.420Z | block | bf-06 | 198.51.100.44 | 0.98 | repeated-login-failure: 로그인 실패 61건
+2026-10-30T06:56:44.420Z | block | bf-07 | 203.0.113.15 | 0.98 | repeated-login-failure: 로그인 실패 40건
+2026-10-30T06:56:44.420Z | block | bf-08 | 192.0.2.18 | 0.98 | repeated-login-failure: 로그인 실패 70건
+2026-10-30T06:56:44.420Z | block | bf-09 | 198.51.100.8 | 0.93 | password-spraying: 계정 15개에 같은 비밀번호
+2026-10-30T06:56:44.420Z | block | bf-10 | 203.0.113.40 | 0.98 | repeated-login-failure: 로그인 실패 90건
+2026-10-30T06:56:44.420Z | alert | bf-11 | 192.0.2.50 | 0.5 | repeated-login-failure: 로그인 실패 4건
+2026-10-30T06:56:44.420Z | alert | bf-12 | 198.51.100.50 | 0.6 | repeated-login-failure: 로그인 실패 6건
+2026-10-30T06:56:44.420Z | alert | bf-13 | 203.0.113.50 | 0.55 | repeated-login-failure: 로그인 실패 3건
+2026-10-30T06:56:44.420Z | alert | bf-14 | 192.0.2.51 | 0.65 | repeated-login-failure: 로그인 실패 5건
+2026-10-30T06:56:44.420Z | alert | bf-15 | 198.51.100.51 | 0.55 | repeated-login-failure: 로그인 실패 4건
+2026-10-30T06:56:44.420Z | alert | bf-16 | 203.0.113.51 | 0.55 | repeated-login-failure: 로그인 실패 3건
+2026-10-30T06:56:44.420Z | alert | bf-17 | 192.0.2.52 | 0.5 | repeated-login-failure: 로그인 실패 4건
+2026-10-30T06:56:44.420Z | alert | bf-18 | 198.51.100.52 | 0.65 | repeated-login-failure: 로그인 실패 8건
+2026-10-30T06:56:44.420Z | alert | bf-19 | 203.0.113.52 | 0.55 | repeated-login-failure: 로그인 실패 3건
