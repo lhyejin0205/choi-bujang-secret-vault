@@ -55,6 +55,10 @@ export function buildRules(alerts, existingRules = [], now = new Date()) {
     }
     const id = `xdr-bf-${ip}`;
     const prev = own.get(id);
+    // 만료는 실행 시각이 아니라 경보 발생 시각 기준입니다. 오래된 경보를 다시 읽어도 차단이 늘어나지 않습니다.
+    const at = Date.parse(alert.timestamp);
+    const expires = Math.max((Number.isFinite(at) ? at : now.getTime()) + TTL_MS, Date.parse(prev?.expiresAt ?? '') || 0);
+    if (expires <= now.getTime()) { skipped.push(alert.id); continue; }
     own.set(id, {
       id,
       action: 'deny',
@@ -63,7 +67,7 @@ export function buildRules(alerts, existingRules = [], now = new Date()) {
       reason: d.reason,
       confidence: Math.max(prev?.confidence ?? 0, d.confidence),
       createdAt: prev?.createdAt ?? now.toISOString(),
-      expiresAt: new Date(now.getTime() + TTL_MS).toISOString(),
+      expiresAt: new Date(expires).toISOString(),
     });
   }
   return { results, rules: [...others, ...own.values()], skipped };
@@ -83,8 +87,10 @@ export function writeNotices(results, now = new Date()) {
 }
 
 function main() {
-  const now = new Date();
   const { alerts } = JSON.parse(readFileSync(FIXTURE_FILE, 'utf8'));
+  // 시험 경보는 과거 시각이므로, 시계를 마지막 경보 시각에 맞춰 돌립니다.
+  const last = Math.max(...alerts.map((a) => Date.parse(a?.timestamp)).filter(Number.isFinite));
+  const now = Number.isFinite(last) ? new Date(last) : new Date();
   const { results, rules, skipped } = buildRules(alerts, loadRules(), now);
   writeFileSync(RULES_FILE, JSON.stringify({ schema: 'aleph.xdr.deny-rules.v1', rules }, null, 2) + '\n', 'utf8');
   const noticeCount = writeNotices(results, now);
@@ -92,10 +98,21 @@ function main() {
   // 시험 경보를 다시 흘려, 명확한 공격만 막히고 정상 요청은 통과하는지 확인합니다.
   let wrong = 0;
   let blocked = 0;
-  for (const { alert, d } of results) {
-    const denied = isDenied(rules, alert.data?.srcip, now);
+  // 시험 경보를 각자 도착한 시각에 다시 흘립니다. 그 시각까지 도착한 경보만으로 규칙을 새로 만들고,
+  // 같은 주소에 TTL 안의 block 판정이 있으면 막혀야, 없으면 막히면 안 됩니다.
+  // 기대값은 buildRules 의 판단을 빌리지 않고 허용 목록·IPv4·기법 표시·시각만으로 계산합니다.
+  const allow = loadAllowlist();
+  const timeOf = (a) => { const t = Date.parse(a?.timestamp); return Number.isFinite(t) ? t : now.getTime(); };
+  const blocks = results.filter((r) => r.d.action === 'block' && IPV4.test(r.alert.data?.srcip ?? '') && !allow.has(r.alert.data?.srcip) && isT1110(r.alert)).map((r) => ({ ip: r.alert.data?.srcip, t: timeOf(r.alert) }));
+  for (const { alert } of results) {
+    const ip = alert.data?.srcip;
+    const t = timeOf(alert);
+    const at = new Date(t);
+    const ownRules = buildRules(alerts.filter((a) => timeOf(a) <= t), [], at).rules.filter((r) => typeof r?.id === 'string' && r.id.startsWith('xdr-bf-'));
+    const denied = isDenied(ownRules, ip, at);
+    const expected = blocks.some((b) => b.ip === ip && b.t <= t && t < b.t + TTL_MS);
     if (denied) blocked += 1;
-    if (denied !== (d.action === 'block') || (denied && d.action === 'record')) wrong += 1;
+    if (denied !== expected) wrong += 1;
   }
   console.log(`거부 규칙 ${rules.length}개, 새 알림 ${noticeCount}줄, 규칙 제외 ${skipped.length}건`);
   console.log(`다시 흘린 경보 ${results.length}건 중 막힘 ${blocked}건, 기대와 다른 경우 ${wrong}건`);

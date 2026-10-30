@@ -477,6 +477,42 @@
         "srcuser": "user06",
         "url": "/logout"
       }
+    },
+    {
+      "id": "wi-90",
+      "timestamp": "2026-09-27T10:00:00+09:00",
+      "agent": {
+        "name": "choi-bujang-pc"
+      },
+      "rule": {
+        "level": 3,
+        "description": "정상 페이지 요청에서 404 응답이 나왔습니다.",
+        "mitre": []
+      },
+      "data": {
+        "srcip": "198.51.100.90",
+        "url": "/favicon.ico",
+        "count": "1"
+      }
+    },
+    {
+      "id": "wi-91",
+      "timestamp": "2026-09-27T10:01:00+09:00",
+      "agent": {
+        "name": "choi-bujang-pc"
+      },
+      "rule": {
+        "level": 12,
+        "description": "같은 주소에서 SQL 구문을 이어 붙인 요청이 9번 반복됐습니다.",
+        "mitre": [
+          "T1190"
+        ]
+      },
+      "data": {
+        "srcip": "198.51.100.90",
+        "url": "/notes?q=1'+or+1=1",
+        "count": "9"
+      }
     }
   ]
 }

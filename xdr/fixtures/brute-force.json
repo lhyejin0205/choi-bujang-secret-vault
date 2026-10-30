@@ -507,6 +507,44 @@
         "srcip": "198.51.100.62",
         "srcuser": "user08"
       }
+    },
+    {
+      "id": "bf-90",
+      "timestamp": "2026-09-27T10:00:00+09:00",
+      "agent": {
+        "name": "choi-bujang-pc"
+      },
+      "rule": {
+        "level": 12,
+        "description": "같은 주소에서 2분 안에 로그인 실패 30건이 쌓였습니다.",
+        "mitre": [
+          "T1110"
+        ]
+      },
+      "data": {
+        "srcip": "198.51.100.91",
+        "srcuser": "user01",
+        "count": "30"
+      }
+    },
+    {
+      "id": "bf-91",
+      "timestamp": "2026-09-27T10:02:00+09:00",
+      "agent": {
+        "name": "choi-bujang-pc"
+      },
+      "rule": {
+        "level": 3,
+        "description": "같은 주소에서 로그인에 성공했습니다.",
+        "mitre": [
+          "T1078"
+        ]
+      },
+      "data": {
+        "srcip": "198.51.100.91",
+        "srcuser": "user01",
+        "count": "1"
+      }
     }
   ]
 }
