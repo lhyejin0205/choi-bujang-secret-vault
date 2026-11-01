@@ -124,10 +124,10 @@ async function checkOriginalApiClosed(config, env) {
 }
 
 export async function runAttackChecks(config, env = process.env) {
-  if (![1, 2, 3, 4, 5].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 2, 3, 4, 5, 6].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
-  if (config.step === 5) {
+  if (config.step >= 5) {
     return [...await checkLoginRequired(app), await checkOriginalApiClosed(config, env),
       ...OWNER_ATTACKS.map(([attackId, expected]) => ({ attackId, expected, observed: notSent }))];
   }

@@ -1,4 +1,4 @@
-# BYTE BACK 방어전 · 5단계 저장점
+# BYTE BACK 방어전 · 6단계 저장점
 
 모든 메모는 실습용 가상 자료입니다. 실제 개인정보, 비밀번호, 토큰, 서버 전용 키를 코드·Git·채팅에 넣지 마세요. 코딩 도구에는 [AGENTS.md](AGENTS.md)를 먼저 읽히세요.
 
@@ -11,6 +11,7 @@
 | 3 | Supabase Auth 이메일·비밀번호 로그인·로그아웃 화면, 자료 API의 토큰 검사, 로그인한 사용자의 메모 추가·수정·삭제 (`73b033d`) |
 | 4 | 자료 API의 소유자 검사(본인 메모만 읽기·추가·수정·삭제, 주인 바꾸기 거부), 가상 메모 네 건을 A 소유로 연결, `public.notes` RLS·최소 권한 SQL (`6a7345c`) |
 | 5 | 자료 요청을 서버 함수 한곳으로 모음: 브라우저의 Supabase 직접 자료 호출은 원래 없음(확인), `public.notes`의 PUBLIC·anon·authenticated 직접 권한 회수 SQL, `originalApiUrl` 기록, 원본 API 자기 점검 (`6141b8a`). 이어서 가점 작업으로 로그인·로그아웃도 서버 함수로 옮겨 화면 코드에서 Supabase 키·SDK 제거 **(이 저장점)** |
+| 6 | 판정 요청의 `deviceRegistered`가 `true`인 경우에만 자료실 읽기를 허용하고, 미등록·누락은 `device_not_registered`로 거부. 실제 기기 접속 검증은 운영 심판이 담당 |
 
 ## 현재 동작
 
@@ -30,7 +31,8 @@
 | `POST /api/logout` | `Authorization: Bearer <토큰>` → 200 `{ok:true}` |
 
 - **원본 자료(5단계):** 원본 자료 API는 `https://fcmjfhjbsaqggxmmjbjo.supabase.co/rest/v1/notes`이며 `originalApiUrl`에 적었습니다. PUBLIC·anon·authenticated에는 이 테이블 권한이 없어 publishable(anon) 키나 로그인 토큰으로 직접 읽거나 고칠 수 없고, 서버 전용 키를 가진 서버 함수만 접근합니다.
-- **설정 `aleph.config.json`:** `step`은 5, `identityProvider`는 Supabase Auth의 발급자(`…/auth/v1`), 대상(`authenticated`), 공개키 주소(`…/.well-known/jwks.json`)이며 비밀 키는 들어 있지 않습니다. `allowedRoutes`는 위 일곱 경로, `originalApiUrl`은 쿼리 없는 원본 자료 주소입니다.
+- **기기 등록 판정(6단계):** `src/decider.mjs`는 계약에 있는 `deviceRegistered`만 확인합니다. 등록 기기는 `allow`, 미등록 또는 값이 없으면 `deny`와 `device_not_registered`를 반환합니다. `npm run decider:test`는 가상 요청 연습이며 실제 기기 접속이나 심판 판정이 아닙니다.
+- **설정 `aleph.config.json`:** `step`은 6, `identityProvider`는 Supabase Auth의 발급자(`…/auth/v1`), 대상(`authenticated`), 공개키 주소(`…/.well-known/jwks.json`)이며 비밀 키는 들어 있지 않습니다. `allowedRoutes`는 위 일곱 경로, `originalApiUrl`은 쿼리 없는 원본 자료 주소입니다.
 - **라우팅 `vercel.json`:** `/api/notes/:id`를 `/api/notes?id=:id`로, `/api/login`·`/api/logout`을 `/api/notes?session=login|logout`으로 넘겨 함수 파일 하나(`api/notes.js`)가 처리합니다. 시작 틀의 서버 함수 기준표(`package/baseline-functions.json`)에 맞춰 함수 파일을 늘리지 않았습니다. 빌드는 `public/aleph.json`에 저장소·커밋·배포 주소와 단계를 기록하고, `data.json`이 남아 있으면 실패합니다.
 
 ## 처음 준비와 다시 실행하는 방법
@@ -41,7 +43,8 @@
 4. **직접 권한 회수(5단계):** `supabase/stage5-revoke.sql`을 ①→②→③ 순서로 실행합니다. PUBLIC·anon·authenticated의 `public.notes` 권한을 모두 거두고, service_role 권한과 RLS·정책은 그대로 둡니다. 4단계에서 authenticated에 준 권한도 여기서 회수됩니다.
 5. **Vercel 환경변수:** 프로젝트 Settings > Environment Variables에 `SUPABASE_URL`과 `SUPABASE_SECRET_KEY`(서버 전용 키)가 있어야 합니다. 값은 직접 입력하고 저장한 뒤 Redeploy 합니다. `SUPABASE_SECRET_KEY`는 DB 읽기·쓰기, 로그인·로그아웃, 로그인 검사에 서버에서만 쓰입니다.
 6. **시험:** `npm test`.
-7. **제출 묶음:** 원본 API 자기 점검에는 공개용 키가 필요합니다. 화면 코드에 키가 없으므로 `SUPABASE_PUBLISHABLE_KEY=sb_publishable_… npm run bundle`처럼 실행할 때만 넘깁니다. 키 없이 실행하면 그 점검은 미실행으로 남습니다. 가짜 검사기와 가짜 저장소로 도는 시험이며 실제 로그인이나 배포를 확인하지 않습니다.
+7. **6단계 판정기 연습:** `npm run decider:test`를 실행합니다. `등록 기기의 정상 요청` 통과 뒤 `미등록 기기의 가상 요청`이 `device_not_registered`로 거부되는지 확인합니다. 미등록 기기 공격은 심판이 확인합니다. 별도 접속 프로그램은 설치하지 않습니다.
+8. **제출 묶음:** 원본 API 자기 점검에는 공개용 키가 필요합니다. 화면 코드에 키가 없으므로 `SUPABASE_PUBLISHABLE_KEY=sb_publishable_… npm run bundle`처럼 실행할 때만 넘깁니다. 키 없이 실행하면 그 점검은 미실행으로 남습니다. 가짜 검사기와 가짜 저장소로 도는 시험이며 실제 로그인이나 배포를 확인하지 않습니다.
 
 ## 확인 방법
 
@@ -50,11 +53,12 @@
 - 틀린 비밀번호로 로그인하면 화면에 이유가 나와야 합니다.
 - A로 로그인하면 A의 네 메모만, B로 로그인하면 B 시험 메모만 보여야 합니다. B가 A 메모 id로 `GET`·`PUT`·`DELETE`하면 404, 자기 메모의 주인을 바꾸는 `PUT`은 403이어야 합니다.
 - 원본 직접 요청: publishable 키로 `/rest/v1/notes`를 직접 부르면 자료 없이 거부되어야 합니다(심판이 anon 키로 확인). `npm run bundle`의 자기 점검도 같은 요청을 한 번 보내 결과를 기록합니다.
+- 판정기 연습: `npm run decider:test`를 실행합니다. 순서는 `등록 기기의 정상 요청` 통과, `미등록 기기의 가상 요청` 거부(`device_not_registered`)입니다. 이는 가상 요청 연습이지 운영 심판 판정이 아닙니다.
 - 화면 원본(Ctrl+U)에서 `sb_publishable`·`supabase`를 찾으면 0건이어야 합니다.
 - 공개 파일 검색은 아래 한 줄입니다. 결과가 비어 있어야 정상입니다.
   `git grep -n -E "실습용 가상 (과제|포트폴리오|리추얼|행정) 기록" origin/main`
 
-## 알려진 약점 (5단계 기준)
+## 알려진 약점 (6단계 기준)
 
 - 토큰 검사는 서명과 만료를 확인합니다. 로그아웃해도 이미 발급된 토큰은 만료 전까지 검사를 통과할 수 있습니다.
 - 브라우저에 refresh token을 주지 않으므로 접근 토큰이 만료되면(보통 1시간) 다시 로그인해야 합니다.
@@ -74,5 +78,6 @@
 - **2026-10-29 (4단계 API·RLS):** 배포(`6a7345c`) 뒤 A는 A 메모 네 건만, B는 B 시험 메모 한 건만 보였고 A·B 모두 자기 메모를 추가·수정·삭제했습니다. B 토큰으로 A 메모 id에 `GET`·`PUT`·`DELETE`는 모두 404, B가 자기 메모의 `owner_id`를 바꾸는 `PUT`은 403이었습니다. RLS 적용 전 화면에서 확인한 anon 일곱 권한과 authenticated DELETE·INSERT는 false, 기존 정책 0개였고, 적용 후 anon은 모두 false, authenticated는 SELECT·INSERT·UPDATE·DELETE만 true, 정책은 `notes_*_own` 네 개였습니다.
 - **2026-10-29 (5단계):** 브라우저 코드의 Supabase 직접 자료 호출은 원래 없었습니다. `public.notes` 권한 회수 전 authenticated는 SELECT·INSERT·UPDATE·DELETE가 true였고, 회수 후 public·anon·authenticated 21개 모두 false, service_role의 SELECT·INSERT·UPDATE·DELETE는 true였습니다. 회수 뒤 배포(`6141b8a`)에서 A가 메모를 읽고 추가·수정·삭제했고, `npm run bundle`의 anon 키 직접 요청은 401로 자료가 없었습니다.
 - **5단계 가점(로그인 서버 이전):** (배포 뒤 A·B 로그인·로그아웃, 틀린 비밀번호 안내, 화면 원본의 키 0건을 확인한 뒤 여기에 적으세요.)
+- **6단계 판정기 연습:** 등록 기기 요청은 허용되고 미등록 기기 가상 요청은 `device_not_registered`로 거부됩니다. 이 로컬 연습은 실제 접속 또는 심판 판정 증거가 아닙니다.
 
 `bundle-notes.json`과 `artifacts/submission.json`은 Git에서 무시되는 로컬 파일이며 커밋하지 않습니다. `npm run decider:test`와 `npm run detect:test`는 가상 연습이며 운영 심판 판정이 아닙니다.
