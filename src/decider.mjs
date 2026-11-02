@@ -3,12 +3,18 @@
 export const RULE_IDS = Object.freeze(['device_registered']);
 
 export async function decide(request) {
-  const registered = request.deviceRegistered === true;
+  const registeredDevice = request.deviceRegistered === true
+    && typeof request.subjectId === 'string' && request.subjectId.length > 0
+    && typeof request.deviceId === 'string' && /^[0-9a-f]{16}$/u.test(request.deviceId);
+  const readRoute = request.service === 'notes' && request.method === 'GET'
+    && ((request.route === 'GET /notes' && request.path === '/notes')
+      || (request.route === 'GET /notes/:id' && /^\/notes\/[^/]+$/u.test(request.path)));
+  const allowed = registeredDevice && readRoute;
   return {
     schema: 'aleph.decision.v1',
     requestId: request.requestId,
-    decision: registered ? 'allow' : 'deny',
-    reasonCode: registered ? 'approved' : 'device_not_registered',
+    decision: allowed ? 'allow' : 'deny',
+    reasonCode: allowed ? 'approved' : 'device_not_registered',
     ruleIds: [RULE_IDS[0]],
   };
 }

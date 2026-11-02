@@ -11,7 +11,7 @@
 | 3 | Supabase Auth 이메일·비밀번호 로그인·로그아웃 화면, 자료 API의 토큰 검사, 로그인한 사용자의 메모 추가·수정·삭제 (`73b033d`) |
 | 4 | 자료 API의 소유자 검사(본인 메모만 읽기·추가·수정·삭제, 주인 바꾸기 거부), 가상 메모 네 건을 A 소유로 연결, `public.notes` RLS·최소 권한 SQL (`6a7345c`) |
 | 5 | 자료 요청을 서버 함수 한곳으로 모음: 브라우저의 Supabase 직접 자료 호출은 원래 없음(확인), `public.notes`의 PUBLIC·anon·authenticated 직접 권한 회수 SQL, `originalApiUrl` 기록, 원본 API 자기 점검 (`6141b8a`). 이어서 가점 작업으로 로그인·로그아웃도 서버 함수로 옮겨 화면 코드에서 Supabase 키·SDK 제거 **(이 저장점)** |
-| 6 | 판정 요청의 `deviceRegistered`가 `true`인 경우에만 자료실 읽기를 허용하고, 미등록·누락은 `device_not_registered`로 거부. 실제 기기 접속 검증은 운영 심판이 담당 |
+| 6 | 판정 요청의 등록 기기·가명 사용자·확인된 기기 ID와 `notes` 읽기 경로(`GET /notes`, `GET /notes/:id`)를 함께 확인합니다. 미등록·확인값 누락·다른 경로/동작은 `device_not_registered`로 거부. 실제 기기 접속 검증은 운영 심판이 담당 |
 
 ## 현재 동작
 
@@ -31,7 +31,7 @@
 | `POST /api/logout` | `Authorization: Bearer <토큰>` → 200 `{ok:true}` |
 
 - **원본 자료(5단계):** 원본 자료 API는 `https://fcmjfhjbsaqggxmmjbjo.supabase.co/rest/v1/notes`이며 `originalApiUrl`에 적었습니다. PUBLIC·anon·authenticated에는 이 테이블 권한이 없어 publishable(anon) 키나 로그인 토큰으로 직접 읽거나 고칠 수 없고, 서버 전용 키를 가진 서버 함수만 접근합니다.
-- **기기 등록 판정(6단계):** `src/decider.mjs`는 계약에 있는 `deviceRegistered`만 확인합니다. 등록 기기는 `allow`, 미등록 또는 값이 없으면 `deny`와 `device_not_registered`를 반환합니다. `npm run decider:test`는 가상 요청 연습이며 실제 기기 접속이나 심판 판정이 아닙니다.
+- **기기 등록 판정(6단계):** `src/decider.mjs`는 계약에 있는 `deviceRegistered`, `subjectId`, `deviceId`, `service`, `method`, `path`, `route`만 확인합니다. 등록된 확인 기기의 자료 읽기 경로만 `allow`하고, 미등록·확인값 누락·쓰기/다른 경로는 `deny`와 `device_not_registered`를 반환합니다. `npm run decider:test`는 가상 요청 연습이며 실제 기기 접속이나 심판 판정이 아닙니다.
 - **설정 `aleph.config.json`:** `step`은 6, `identityProvider`는 Supabase Auth의 발급자(`…/auth/v1`), 대상(`authenticated`), 공개키 주소(`…/.well-known/jwks.json`)이며 비밀 키는 들어 있지 않습니다. `allowedRoutes`는 위 일곱 경로, `originalApiUrl`은 쿼리 없는 원본 자료 주소입니다.
 - **라우팅 `vercel.json`:** `/api/notes/:id`를 `/api/notes?id=:id`로, `/api/login`·`/api/logout`을 `/api/notes?session=login|logout`으로 넘겨 함수 파일 하나(`api/notes.js`)가 처리합니다. 시작 틀의 서버 함수 기준표(`package/baseline-functions.json`)에 맞춰 함수 파일을 늘리지 않았습니다. 빌드는 `public/aleph.json`에 저장소·커밋·배포 주소와 단계를 기록하고, `data.json`이 남아 있으면 실패합니다.
 

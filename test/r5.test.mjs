@@ -161,7 +161,7 @@ test('step 5 attack check also sends one anon-key request to the original API an
       'https://evil.example/rest/v1/notes', null]) {
       await assert.rejects(() => runAttackChecks({ ...step5, originalApiUrl: bad }, key));
     }
-    await assert.rejects(() => runAttackChecks(step5, { SUPABASE_PUBLISHABLE_KEY: 'sb_secret_should_not_be_here' }));
+    await assert.rejects(() => runAttackChecks(step5, { SUPABASE_PUBLISHABLE_KEY: 'TEST_FAKE_KEY' }));
     sent.length = 0;
     globalThis.fetch = async (url, init) => { sent.push(new URL(url).host); return new Response('{}', { status: 401 }); };
     const noKey = await runAttackChecks(step5, {});
