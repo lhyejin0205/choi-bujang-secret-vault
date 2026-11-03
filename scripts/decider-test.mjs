@@ -23,23 +23,32 @@ export async function checkDecider({ decide, ruleIds }) {
       || !ruleIds.includes('device_registered')) {
     throw new Error('6단계 device_registered 규칙을 먼저 구현하고 RULE_IDS에 적어 주세요.');
   }
-  const { normal, suspicious } = fixtureRequests();
+  const { normal, regionOnly, suspicious, unverifiedSource, forgedHeader } = fixtureRequests();
   const missingRegistration = { ...normal, requestId: randomUUID() };
   delete missingRegistration.deviceRegistered;
+  const missingSignals = { ...normal, requestId: randomUUID() };
+  delete missingSignals.signals;
   const checks = [
     { name: '등록 기기의 정상 요청', request: normal, decision: 'allow', reasonCode: 'approved' },
+    { name: '지역만 다른 가상 요청', request: regionOnly, decision: 'allow', reasonCode: 'approved' },
     { name: '미등록 기기의 가상 요청', request: { ...normal, requestId: randomUUID(),
       deviceRegistered: false }, decision: 'deny', reasonCode: 'device_not_registered' },
     { name: '등록 여부가 없는 가상 요청', request: missingRegistration,
       decision: 'deny', reasonCode: 'device_not_registered' },
+    { name: '접속 정보가 없는 가상 요청', request: missingSignals,
+      decision: 'step_up', reasonCode: 'step_up_required' },
+    { name: '위조 출처 신호가 있는 가상 요청', request: forgedHeader,
+      decision: 'step_up', reasonCode: 'step_up_required' },
+    { name: '출처가 불명확한 가상 요청', request: unverifiedSource,
+      decision: 'step_up', reasonCode: 'step_up_required' },
   ];
-  if (ruleIds.includes('step_up_required')) {
+  if (ruleIds.includes('unusual_access_pattern')) {
     checks.push(
       { name: '복합 이상 접속', request: suspicious, decision: 'step_up',
         reasonCode: 'step_up_required' },
       { name: '다시 확인한 복합 이상 접속', request: { ...suspicious,
         requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 60 } },
-      decision: 'allow' },
+      decision: 'step_up', reasonCode: 'step_up_required' },
     );
   }
   const results = [];

@@ -45,7 +45,7 @@ test('5단계 설정은 로그인 발급자, 실제 자료 API 경로, 원본 �
   const config = JSON.parse(await readFile(new URL('../aleph.config.json', import.meta.url)));
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
   const vercel = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)));
-  assert.equal(config.step, 5);
+  assert.ok(config.step >= 5);
   const issuer = new URL(config.identityProvider.issuer);
   const original = new URL(config.originalApiUrl);
   assert.equal(original.protocol, 'https:');
