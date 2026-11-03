@@ -41,7 +41,7 @@ function hasCompleteFixtureContext(request) {
 
 function unusualAccessPattern(request) {
   const { hour, network } = request.signals;
-  const unusualHour = hour >= 3 && hour <= 5;
+  const unusualHour = hour < 6 || hour >= 22;
   const suddenBulkRead = request.recentEvents.some(event => event.kind === 'bulk_read'
     && event.ageSeconds <= 300 && event.count >= 20);
   return unusualHour && network === 'first_seen' && suddenBulkRead;
