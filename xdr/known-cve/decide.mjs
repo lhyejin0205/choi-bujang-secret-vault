@@ -12,9 +12,12 @@ const PATTERNS = Object.freeze([
   }),
   Object.freeze({
     name: 'known-vulnerability-scanner-trace',
-    condition: 'T1190 경보 설명에 알려진 취약점 점검 흔적 또는 점검 도구 흔적이 있지만 완전한 JNDI 원격 조회 구문은 보이지 않으면 추가 확인 대상으로 봅니다.',
-    evidence: 'CVE-2021-44228 점검 흔적과 T1190 분류는 확인 대상의 근거지만, 도구와 비슷하다는 표기만으로 실제 악용을 확정할 수는 없습니다.',
+    condition: '완전한 JNDI 구문이 없더라도 설명의 점검 표현 또는 요청 머리글·URL의 알려진 점검 도구 흔적이 있으면 T1190 유무와 관계없이 추가 확인 대상으로 봅니다.',
+    evidence: '취약점 점검 도구의 흔적은 조사할 근거지만, 실제 악용 구문이나 T1190이 확인되지 않으면 차단을 확정할 근거가 아닙니다.',
     descriptionTerms: Object.freeze(['점검 흔적', '점검 도구']),
+    fields: Object.freeze(['data.useragent', 'data.url']),
+    requestIndicators: Object.freeze(['/tools/class-check']),
+    requestExpression: '(?:log4j|log4shell|cve[-_ ]?2021[-_ ]?44228).{0,80}(?:scan(?:ner)?|check(?:er)?|probe|test|tool)|(?:scan(?:ner)?|check(?:er)?|probe|test|tool).{0,80}(?:log4j|log4shell|cve[-_ ]?2021[-_ ]?44228)',
     confidence: 0.6,
   }),
 ]);
@@ -39,7 +42,16 @@ function hasScannerTrace(alert) {
   const description = typeof alert?.rule?.description === 'string'
     ? alert.rule.description.toLowerCase() : '';
   const pattern = PATTERNS.find((item) => item.name === 'known-vulnerability-scanner-trace');
-  return pattern.descriptionTerms.some((term) => description.includes(term));
+  if (pattern.descriptionTerms.some((term) => description.includes(term))) return true;
+
+  const expression = new RegExp(pattern.requestExpression, 'iu');
+  return pattern.fields.some((field) => {
+    const [parent, key] = field.split('.');
+    const value = alert?.[parent]?.[key];
+    if (typeof value !== 'string') return false;
+    return pattern.requestIndicators.some((indicator) => value.toLowerCase().includes(indicator))
+      || expression.test(value);
+  });
 }
 
 function actionFor(confidence) {
@@ -61,7 +73,7 @@ export function decide(alert) {
     };
   }
 
-  if (t1190 && hasScannerTrace(alert)) {
+  if (hasScannerTrace(alert)) {
     const pattern = PATTERNS.find((item) => item.name === 'known-vulnerability-scanner-trace');
     return {
       action: actionFor(pattern.confidence),

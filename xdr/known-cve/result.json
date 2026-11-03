@@ -78,7 +78,7 @@
       "alertId": "kc-13",
       "action": "alert",
       "confidence": 0.6,
-      "reason": "known-vulnerability-scanner-trace: CVE-2021-44228 점검 흔적과 T1190 분류는 확인 대상의 근거지만, 도구와 비슷하다는 표기만으로 실제 악용을 확정할 수는 없습니다."
+      "reason": "known-vulnerability-scanner-trace: 취약점 점검 도구의 흔적은 조사할 근거지만, 실제 악용 구문이나 T1190이 확인되지 않으면 차단을 확정할 근거가 아닙니다."
     },
     {
       "alertId": "kc-14",

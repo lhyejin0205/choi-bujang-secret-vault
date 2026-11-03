@@ -30,6 +30,21 @@ test('known-cve decision module is standalone and distinguishes attack, ambiguou
   assert.equal(decisions[0].action, 'block');
   assert.equal(decisions[12].action, 'alert');
   assert.ok(decisions.slice(16).every((decision) => decision.action === 'record'));
+  const untaggedScanner = {
+    ...fixture.alerts[12],
+    rule: { ...fixture.alerts[12].rule, mitre: [] },
+  };
+  assert.equal(decide(untaggedScanner).action, 'alert');
+  const urlOnlyScanner = {
+    ...untaggedScanner,
+    rule: { ...untaggedScanner.rule, description: '요청 요약' },
+  };
+  assert.equal(decide(urlOnlyScanner).action, 'alert');
+  const ordinary = {
+    ...urlOnlyScanner,
+    data: { ...urlOnlyScanner.data, url: '/notes', useragent: 'browser' },
+  };
+  assert.equal(decide(ordinary).action, 'record');
   assert.ok(decisions.every((decision) => decision.confidence >= 0 && decision.confidence <= 1
     && typeof decision.reason === 'string'));
 });
