@@ -94,6 +94,11 @@ function publishableKey(env) {
 }
 
 const ORIGINAL_EXPECTED = 'anon 키로 원본 자료 API(/rest/v1/notes)에서 메모를 직접 확인';
+const STEP_UP_NOT_SENT = {
+  attackId: 'same_login_step_up_material_block',
+  expected: '복합 이상 접속에서 재로그인 전 자료 차단과 새 요청 재판정',
+  observed: '미실행. 계약에 같은 로그인 재로그인 시각이 없어 실제 자료 요청을 보내지 않음',
+};
 
 async function checkOriginalApiClosed(config, env) {
   const url = originalUrl(config);
@@ -124,12 +129,14 @@ async function checkOriginalApiClosed(config, env) {
 }
 
 export async function runAttackChecks(config, env = process.env) {
-  if (![1, 2, 3, 4, 5, 6].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 2, 3, 4, 5, 6, 7].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
   if (config.step >= 5) {
-    return [...await checkLoginRequired(app), await checkOriginalApiClosed(config, env),
+    const results = [...await checkLoginRequired(app), await checkOriginalApiClosed(config, env),
       ...OWNER_ATTACKS.map(([attackId, expected]) => ({ attackId, expected, observed: notSent }))];
+    if (config.step === 7) results.push(STEP_UP_NOT_SENT);
+    return results;
   }
   if (config.step === 4) {
     return [...await checkLoginRequired(app),

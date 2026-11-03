@@ -171,3 +171,26 @@ test('step 5 attack check also sends one anon-key request to the original API an
     globalThis.fetch = originalFetch;
   }
 });
+
+test('step 7 attack check leaves same-login data blocking unrun without its contract', async () => {
+  const originalFetch = globalThis.fetch;
+  const sent = [];
+  const step7 = { ...config, step: 7, originalApiUrl: 'https://project.supabase.co/rest/v1/notes' };
+  try {
+    globalThis.fetch = async (url, init) => {
+      sent.push({ path: new URL(url).pathname, method: init.method });
+      return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401 });
+    };
+    const results = await runAttackChecks(step7, {});
+    assert.deepEqual(sent.map(({ path, method }) => [path, method]), [
+      ['/api/notes', 'GET'], ['/api/notes', 'POST'], ['/api/notes', 'GET'],
+    ]);
+    const check = results.find(item => item.attackId === 'same_login_step_up_material_block');
+    assert.match(check.expected, /재로그인/u);
+    assert.match(check.observed, /^미실행/u);
+    assert.match(check.observed, /같은 로그인/u);
+    assert.equal(JSON.stringify(results).includes('accessToken'), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
