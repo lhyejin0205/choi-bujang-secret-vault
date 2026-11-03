@@ -40,6 +40,11 @@ test('known-cve decision module is standalone and distinguishes attack, ambiguou
     rule: { ...untaggedScanner.rule, description: '요청 요약' },
   };
   assert.equal(decide(urlOnlyScanner).action, 'alert');
+  const descriptionOnly = {
+    ...untaggedScanner,
+    data: { ...untaggedScanner.data, url: '/notes', useragent: 'browser' },
+  };
+  assert.equal(decide(descriptionOnly).action, 'record');
   const ordinary = {
     ...urlOnlyScanner,
     data: { ...urlOnlyScanner.data, url: '/notes', useragent: 'browser' },

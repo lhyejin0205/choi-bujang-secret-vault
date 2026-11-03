@@ -78,7 +78,7 @@
       "alertId": "kc-13",
       "action": "alert",
       "confidence": 0.6,
-      "reason": "known-vulnerability-scanner-trace: 취약점 점검 도구의 흔적은 조사할 근거지만, 실제 악용 구문이나 T1190이 확인되지 않으면 차단을 확정할 근거가 아닙니다."
+      "reason": "known-vulnerability-scanner-trace: 요청에서 확인된 특정 점검 도구 표식은 조사할 근거지만, 설명 문구만으로는 도구 사용을 입증할 수 없습니다."
     },
     {
       "alertId": "kc-14",
