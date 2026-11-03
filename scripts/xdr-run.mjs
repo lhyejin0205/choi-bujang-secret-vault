@@ -55,6 +55,17 @@ export async function runXdr({ root, moduleKey, writeError = (line) => console.e
   const outDir = join(root, 'xdr', moduleKey);
   await mkdir(outDir, { recursive: true });
   await writeFile(join(outDir, 'result.json'), `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+  if (moduleKey === 'known-cve') {
+    const { respondAlerts } = await import(pathToFileURL(join(root, 'xdr', moduleKey, 'respond.mjs')).href);
+    const response = respondAlerts({
+      alerts: fixture.alerts,
+      decisions: decisions.map(({ action, confidence, reason }) => ({ action, confidence, reason })),
+      root,
+    });
+    if (response.replay.normalBlocked || response.replay.mismatches) {
+      writeError(`known-cve 재생 확인 실패: 정상 차단 ${response.replay.normalBlocked}건, 불일치 ${response.replay.mismatches}건`);
+    }
+  }
   return result;
 }
 

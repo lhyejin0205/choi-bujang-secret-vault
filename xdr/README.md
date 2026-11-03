@@ -10,7 +10,7 @@
 |---|---|
 | `brute-force` | 짧은 시간에 몰린 로그인 실패 |
 | `web-injection` | 웹 요청에 섞인 주입 형태 |
-| `known-cve` | 이미 공개된 취약점을 노린 요청 형태 |
+| `known-cve` | CVE-2021-44228 형태의 JNDI 원격 조회와 취약점 점검 흔적 |
 | `persistence` | 다시 켜도 남도록 심긴 서비스·예약 작업 |
 | `privilege` | 평범한 계정의 갑작스러운 권한 상승 |
 | `exfiltration` | 처음 보는 곳으로 빠지는 큰 전송 |
@@ -49,3 +49,10 @@ node scripts/xdr-run.mjs brute-force
 - `xdr/alerts.log` 기록과 판정기 연결은 `respond.mjs` 같은 다른 파일에서 합니다. `decide.mjs` 는 판단 결과만 돌려줍니다.
 
 인터넷을 끈 상태에서 `npm run xdr:run -- <moduleKey>` 를 돌려도 같은 결과가 나오면 심판에서도 같은 결과가 나옵니다.
+
+## known-cve 추가 파일
+
+- `xdr/known-cve/read-alerts.mjs` 는 원본 경보에서 시각·출발 주소·계정·규칙 수준·설명만 출력하고 비밀값처럼 보이는 문자열은 가립니다.
+- `patterns.json` 에는 CVE-2021-44228 형태 요청과 MITRE ATT&CK T1190에 근거한 두 패턴을 기록합니다. `decide.mjs` 는 이를 독립 상수로 구현하며 import·파일 입출력 없이 `block`·`alert`·`record` 만 반환합니다.
+- `npm run xdr:run -- known-cve` 는 판단 결과를 `result.json` 에 쓰고, `respond.mjs` 로 `xdr-kc-` 거부 규칙과 `xdr/alerts.log` 알림을 연결합니다. 거부 규칙은 경보 시각 기준 1시간 뒤 만료되고 다른 모듈 규칙은 보존됩니다.
+- 재생 확인은 가상 fixture에 대한 로컬 점검입니다. 운영 ZTNA 경로에 연결된 실시간 차단 증거는 아닙니다.

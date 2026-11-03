@@ -1,0 +1,155 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "known-cve",
+  "decisions": [
+    {
+      "alertId": "kc-01",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "jndi-remote-lookup-in-request: CVE-2021-44228 악용 형태는 요청이 처리하는 값에 JNDI 원격 조회 구문을 넣는 것이며, MITRE ATT&CK T1190은 공개 애플리케이션 악용을 분류합니다. (T1190)"
+    },
+    {
+      "alertId": "kc-02",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "jndi-remote-lookup-in-request: CVE-2021-44228 악용 형태는 요청이 처리하는 값에 JNDI 원격 조회 구문을 넣는 것이며, MITRE ATT&CK T1190은 공개 애플리케이션 악용을 분류합니다. (T1190)"
+    },
+    {
+      "alertId": "kc-03",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "jndi-remote-lookup-in-request: CVE-2021-44228 악용 형태는 요청이 처리하는 값에 JNDI 원격 조회 구문을 넣는 것이며, MITRE ATT&CK T1190은 공개 애플리케이션 악용을 분류합니다. (T1190)"
+    },
+    {
+      "alertId": "kc-04",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "jndi-remote-lookup-in-request: CVE-2021-44228 악용 형태는 요청이 처리하는 값에 JNDI 원격 조회 구문을 넣는 것이며, MITRE ATT&CK T1190은 공개 애플리케이션 악용을 분류합니다. (T1190)"
+    },
+    {
+      "alertId": "kc-05",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "jndi-remote-lookup-in-request: CVE-2021-44228 악용 형태는 요청이 처리하는 값에 JNDI 원격 조회 구문을 넣는 것이며, MITRE ATT&CK T1190은 공개 애플리케이션 악용을 분류합니다. (T1190)"
+    },
+    {
+      "alertId": "kc-06",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "jndi-remote-lookup-in-request: CVE-2021-44228 악용 형태는 요청이 처리하는 값에 JNDI 원격 조회 구문을 넣는 것이며, MITRE ATT&CK T1190은 공개 애플리케이션 악용을 분류합니다. (T1190)"
+    },
+    {
+      "alertId": "kc-07",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "jndi-remote-lookup-in-request: CVE-2021-44228 악용 형태는 요청이 처리하는 값에 JNDI 원격 조회 구문을 넣는 것이며, MITRE ATT&CK T1190은 공개 애플리케이션 악용을 분류합니다. (T1190)"
+    },
+    {
+      "alertId": "kc-08",
+      "action": "block",
+      "confidence": 0.96,
+      "reason": "jndi-remote-lookup-in-request: CVE-2021-44228 악용 형태는 요청이 처리하는 값에 JNDI 원격 조회 구문을 넣는 것이며, MITRE ATT&CK T1190은 공개 애플리케이션 악용을 분류합니다. (T1190)"
+    },
+    {
+      "alertId": "kc-09",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-10",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-11",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-12",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-13",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "known-vulnerability-scanner-trace: CVE-2021-44228 점검 흔적과 T1190 분류는 확인 대상의 근거지만, 도구와 비슷하다는 표기만으로 실제 악용을 확정할 수는 없습니다."
+    },
+    {
+      "alertId": "kc-14",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-15",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-16",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-17",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-18",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-19",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-20",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-21",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-22",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-23",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    },
+    {
+      "alertId": "kc-24",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+    }
+  ],
+  "counts": {
+    "block": 8,
+    "alert": 1,
+    "record": 15
+  }
+}
