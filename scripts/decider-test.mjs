@@ -20,10 +20,13 @@ function validResponse(request, response, ruleIds) {
 // Local practice only. The class engine and the server judge validate live requests separately.
 export async function checkDecider({ decide, ruleIds }) {
   if (typeof decide !== 'function' || !Array.isArray(ruleIds)
-      || !ruleIds.includes('device_registered')) {
-    throw new Error('6단계 device_registered 규칙을 먼저 구현하고 RULE_IDS에 적어 주세요.');
+      || !ruleIds.includes('device_registered')
+      || !ruleIds.includes('step_up_required')
+      || !ruleIds.includes('unusual_access_pattern')) {
+    throw new Error('device_registered, unusual_access_pattern, step_up_required 규칙을 RULE_IDS에 적어 주세요.');
   }
-  const { normal, regionOnly, suspicious, unverifiedSource, forgedHeader } = fixtureRequests();
+  const { normal, regionOnly, suspicious, boundaryHour,
+    unverifiedSource, forgedHeader } = fixtureRequests();
   const missingRegistration = { ...normal, requestId: randomUUID() };
   delete missingRegistration.deviceRegistered;
   const missingSignals = { ...normal, requestId: randomUUID() };
@@ -31,6 +34,8 @@ export async function checkDecider({ decide, ruleIds }) {
   const checks = [
     { name: '등록 기기의 정상 요청', request: normal, decision: 'allow', reasonCode: 'approved' },
     { name: '지역만 다른 가상 요청', request: regionOnly, decision: 'allow', reasonCode: 'approved' },
+    { name: '복합 신호지만 6시인 가상 요청', request: boundaryHour,
+      decision: 'allow', reasonCode: 'approved' },
     { name: '미등록 기기의 가상 요청', request: { ...normal, requestId: randomUUID(),
       deviceRegistered: false }, decision: 'deny', reasonCode: 'device_not_registered' },
     { name: '등록 여부가 없는 가상 요청', request: missingRegistration,
@@ -42,15 +47,13 @@ export async function checkDecider({ decide, ruleIds }) {
     { name: '출처가 불명확한 가상 요청', request: unverifiedSource,
       decision: 'step_up', reasonCode: 'step_up_required' },
   ];
-  if (ruleIds.includes('unusual_access_pattern')) {
-    checks.push(
-      { name: '복합 이상 접속', request: suspicious, decision: 'step_up',
-        reasonCode: 'step_up_required' },
-      { name: '다시 확인한 복합 이상 접속', request: { ...suspicious,
-        requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 60 } },
-      decision: 'step_up', reasonCode: 'step_up_required' },
-    );
-  }
+  checks.push(
+    { name: '복합 이상 접속', request: suspicious, decision: 'step_up',
+      reasonCode: 'step_up_required' },
+    { name: '다시 확인한 복합 이상 접속', request: { ...suspicious,
+      requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 60 } },
+    decision: 'step_up', reasonCode: 'step_up_required' },
+  );
   const results = [];
   for (const item of checks) {
     const response = await decide(item.request);

@@ -4,6 +4,7 @@ export const RULE_IDS = Object.freeze([
   'device_registered',
   'connection_context_verified',
   'unusual_access_pattern',
+  'step_up_required',
 ]);
 
 const SIGNAL_KEYS = ['hour', 'network', 'region', 'source'];
@@ -40,10 +41,20 @@ function hasCompleteFixtureContext(request) {
 
 function unusualAccessPattern(request) {
   const { hour, network } = request.signals;
-  const unusualHour = hour < 6 || hour >= 22;
+  const unusualHour = hour >= 3 && hour <= 5;
   const suddenBulkRead = request.recentEvents.some(event => event.kind === 'bulk_read'
     && event.ageSeconds <= 300 && event.count >= 20);
   return unusualHour && network === 'first_seen' && suddenBulkRead;
+}
+
+function stepUpResponse(request, ruleId) {
+  return {
+    schema: 'aleph.decision.v1',
+    requestId: request.requestId,
+    decision: 'step_up',
+    reasonCode: 'step_up_required',
+    ruleIds: [RULE_IDS[3], ruleId],
+  };
 }
 
 export async function decide(request) {
@@ -64,23 +75,11 @@ export async function decide(request) {
   }
 
   if (!hasCompleteFixtureContext(request)) {
-    return {
-      schema: 'aleph.decision.v1',
-      requestId: request.requestId,
-      decision: 'step_up',
-      reasonCode: 'step_up_required',
-      ruleIds: [RULE_IDS[1]],
-    };
+    return stepUpResponse(request, RULE_IDS[1]);
   }
 
   if (unusualAccessPattern(request)) {
-    return {
-      schema: 'aleph.decision.v1',
-      requestId: request.requestId,
-      decision: 'step_up',
-      reasonCode: 'step_up_required',
-      ruleIds: [RULE_IDS[2]],
-    };
+    return stepUpResponse(request, RULE_IDS[2]);
   }
 
   return {
