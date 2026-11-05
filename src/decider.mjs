@@ -42,9 +42,10 @@ function hasCompleteFixtureContext(request) {
 function unusualAccessPattern(request) {
   const { hour, network } = request.signals;
   const unusualHour = hour < 6 || hour >= 22;
+  const firstSeenNetwork = network === 'first_seen';
   const suddenBulkRead = request.recentEvents.some(event => event.kind === 'bulk_read'
     && event.ageSeconds <= 300 && event.count >= 20);
-  return unusualHour && network === 'first_seen' && suddenBulkRead;
+  return unusualHour && firstSeenNetwork && suddenBulkRead;
 }
 
 function stepUpResponse(request, ruleId) {
