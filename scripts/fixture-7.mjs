@@ -54,6 +54,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       + `\n복합 이상 사건: ${unusual.decision}\n6시 복합 신호: ${boundary.decision}`
       + `\n불명확한 출처: ${unverified.decision}`
       + `\n위조 헤더: ${spoofed.decision}\n`);
+    if (ordinary.decision === unusual.decision) {
+      throw new Error('정상 사건과 복합 이상 사건의 판정은 서로 달라야 합니다.');
+    }
     if (ordinary.decision !== 'allow' || regional.decision !== 'allow'
         || boundary.decision !== 'allow'
         || unusual.decision !== 'step_up' || unverified.decision !== 'step_up'
