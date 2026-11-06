@@ -12,6 +12,18 @@
       "confidence": 0.98,
       "createdAt": "2026-09-27T07:10:05.000Z",
       "expiresAt": "2026-09-27T07:40:01.000Z"
+    },
+    {
+      "id": "xdr-ps-203.0.113.33",
+      "action": "deny",
+      "srcip": "203.0.113.33",
+      "alertIds": [
+        "ps-08"
+      ],
+      "reason": "unsigned-service-from-temp-path: MITRE ATT&CK T1543.003은 윈도우 서비스를 만들거나 바꿔 재부팅 뒤에도 프로그램을 실행시키는 지속성 기법이며, 사용자 임시 폴더의 서명 없는 실행 파일은 정상 설치 경로가 아닙니다.",
+      "confidence": 0.92,
+      "createdAt": "2026-09-27T06:44:02.000Z",
+      "expiresAt": "2026-09-27T07:28:31.000Z"
     }
   ]
 }

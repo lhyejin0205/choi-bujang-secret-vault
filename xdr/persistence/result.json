@@ -1,0 +1,155 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "persistence",
+  "decisions": [
+    {
+      "alertId": "ps-01",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "unsigned-service-from-temp-path: MITRE ATT&CK T1543.003은 윈도우 서비스를 만들거나 바꿔 재부팅 뒤에도 프로그램을 실행시키는 지속성 기법이며, 사용자 임시 폴더의 서명 없는 실행 파일은 정상 설치 경로가 아닙니다."
+    },
+    {
+      "alertId": "ps-02",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "unfamiliar-scheduled-task-temp-path: MITRE ATT&CK T1053.005 예약 작업은 정해진 시각이나 부팅 때 프로그램을 다시 실행하게 하는 지속성 기법이며, 임시 폴더 실행 파일을 부르는 낯선 작업은 수업용 작업과 다릅니다."
+    },
+    {
+      "alertId": "ps-03",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "startup-folder-unlisted-program: 시작 폴더 자동 실행은 MITRE ATT&CK T1547.001(로그온 자동 실행)에 해당하는 지속성 기법이며, 이 경보는 T1543으로 분류돼 같은 재부팅 뒤 생존 시도로 다룹니다."
+    },
+    {
+      "alertId": "ps-04",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "repeated-unsigned-service-registration: MITRE ATT&CK T1543.003 서비스 생성을 한 출발 주소가 반복하는 것은 지속성 확보를 여러 번 시도한 흔적이며, 수업 중 정상 설치는 같은 서비스를 연달아 등록하지 않습니다."
+    },
+    {
+      "alertId": "ps-05",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "unfamiliar-scheduled-task-temp-path: MITRE ATT&CK T1053.005 예약 작업은 정해진 시각이나 부팅 때 프로그램을 다시 실행하게 하는 지속성 기법이며, 임시 폴더 실행 파일을 부르는 낯선 작업은 수업용 작업과 다릅니다."
+    },
+    {
+      "alertId": "ps-06",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "unsigned-service-from-temp-path: MITRE ATT&CK T1543.003은 윈도우 서비스를 만들거나 바꿔 재부팅 뒤에도 프로그램을 실행시키는 지속성 기법이며, 사용자 임시 폴더의 서명 없는 실행 파일은 정상 설치 경로가 아닙니다."
+    },
+    {
+      "alertId": "ps-07",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "unsigned-service-from-temp-path: MITRE ATT&CK T1543.003은 윈도우 서비스를 만들거나 바꿔 재부팅 뒤에도 프로그램을 실행시키는 지속성 기법이며, 사용자 임시 폴더의 서명 없는 실행 파일은 정상 설치 경로가 아닙니다."
+    },
+    {
+      "alertId": "ps-08",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "unsigned-service-from-temp-path: MITRE ATT&CK T1543.003은 윈도우 서비스를 만들거나 바꿔 재부팅 뒤에도 프로그램을 실행시키는 지속성 기법이며, 사용자 임시 폴더의 서명 없는 실행 파일은 정상 설치 경로가 아닙니다."
+    },
+    {
+      "alertId": "ps-09",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "persistence-change-needs-review: T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "ps-10",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "persistence-change-needs-review: T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "ps-11",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "persistence-change-needs-review: T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "ps-12",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "persistence-change-needs-review: T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "ps-13",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "persistence-change-needs-review: T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "ps-14",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "persistence-change-needs-review: T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "ps-15",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "persistence-change-needs-review: T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "ps-16",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "persistence-change-needs-review: T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "ps-17",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-persistence-pattern: T1543·T1053 지속성 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "ps-18",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-persistence-pattern: T1543·T1053 지속성 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "ps-19",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-persistence-pattern: T1543·T1053 지속성 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "ps-20",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-persistence-pattern: T1543·T1053 지속성 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "ps-21",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-persistence-pattern: T1543·T1053 지속성 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "ps-22",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-persistence-pattern: T1543·T1053 지속성 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "ps-23",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-persistence-pattern: T1543·T1053 지속성 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "ps-24",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-persistence-pattern: T1543·T1053 지속성 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    }
+  ],
+  "counts": {
+    "block": 8,
+    "alert": 8,
+    "record": 8
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "aleph.xdr.patterns.v1",
+  "moduleKey": "persistence",
+  "source": "MITRE ATT&CK T1543(시스템 프로세스 생성·변경), T1053(예약 작업)",
+  "thresholds": {
+    "block": 0.85,
+    "alert": 0.5
+  },
+  "patterns": [
+    {
+      "name": "unsigned-service-from-temp-path",
+      "techniques": ["T1543"],
+      "condition": "T1543 경보이고 규칙 수준 10 이상이며, 새로 만들거나 바꾼 서비스의 실행 파일이 사용자 임시 폴더(AppData\\Local\\Temp)에 있으면 차단 후보로 봅니다.",
+      "evidence": "MITRE ATT&CK T1543.003은 윈도우 서비스를 만들거나 바꿔 재부팅 뒤에도 프로그램을 실행시키는 지속성 기법이며, 사용자 임시 폴더의 서명 없는 실행 파일은 정상 설치 경로가 아닙니다.",
+      "fields": ["rule.mitre", "rule.level", "data.path"],
+      "minLevel": 10,
+      "pathIndicators": ["\\appdata\\local\\temp\\"],
+      "confidence": 0.92
+    },
+    {
+      "name": "unfamiliar-scheduled-task-temp-path",
+      "techniques": ["T1053"],
+      "condition": "T1053 경보이고 규칙 수준 10 이상이며, 처음 보는 예약 작업이 사용자 임시 폴더의 실행 파일을 부르면 차단 후보로 봅니다.",
+      "evidence": "MITRE ATT&CK T1053.005 예약 작업은 정해진 시각이나 부팅 때 프로그램을 다시 실행하게 하는 지속성 기법이며, 임시 폴더 실행 파일을 부르는 낯선 작업은 수업용 작업과 다릅니다.",
+      "fields": ["rule.mitre", "rule.level", "data.path"],
+      "minLevel": 10,
+      "pathIndicators": ["\\appdata\\local\\temp\\"],
+      "confidence": 0.9
+    },
+    {
+      "name": "startup-folder-unlisted-program",
+      "techniques": ["T1543"],
+      "condition": "T1543으로 분류된 규칙 수준 10 이상 경보에서 사용자 시작 폴더(Start Menu\\Programs\\Startup)에 평소 목록에 없는 실행 파일이 생기면 차단 후보로 봅니다.",
+      "evidence": "시작 폴더 자동 실행은 MITRE ATT&CK T1547.001(로그온 자동 실행)에 해당하는 지속성 기법이며, 이 경보는 T1543으로 분류돼 같은 재부팅 뒤 생존 시도로 다룹니다.",
+      "fields": ["rule.mitre", "rule.level", "data.path"],
+      "minLevel": 10,
+      "pathIndicators": ["\\start menu\\programs\\startup\\"],
+      "confidence": 0.9
+    },
+    {
+      "name": "repeated-unsigned-service-registration",
+      "techniques": ["T1543"],
+      "condition": "T1543 경보이고 규칙 수준 10 이상이며, 같은 출발 주소에서 서명 없는 서비스 등록이 2건 이상(data.count) 반복되면 차단 후보로 봅니다.",
+      "evidence": "MITRE ATT&CK T1543.003 서비스 생성을 한 출발 주소가 반복하는 것은 지속성 확보를 여러 번 시도한 흔적이며, 수업 중 정상 설치는 같은 서비스를 연달아 등록하지 않습니다.",
+      "fields": ["rule.mitre", "rule.level", "data.count"],
+      "minLevel": 10,
+      "minCount": 2,
+      "confidence": 0.9
+    },
+    {
+      "name": "persistence-change-needs-review",
+      "techniques": ["T1543", "T1053"],
+      "condition": "T1543 또는 T1053으로 분류되고 규칙 수준이 4 이상인데 위의 임시 폴더·시작 폴더·반복 신호가 없으면, 막지 않고 알림으로 추가 확인합니다.",
+      "evidence": "T1543·T1053은 지속성 기법이지만 수업용 예약 작업과 도구 서비스도 같은 분류로 잡히므로, 뚜렷한 악성 신호가 없으면 사람이 확인해야 합니다.",
+      "fields": ["rule.mitre", "rule.level"],
+      "minLevel": 4,
+      "confidence": 0.6
+    }
+  ]
+}
