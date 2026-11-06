@@ -50,6 +50,14 @@ function unusualAccessPattern(request) {
   return unusualHour && unfamiliarNetwork && suddenBulkRead;
 }
 
+// 계약: stepUp은 {verified, authAgeSeconds}. 확인 완료이고 0~900초 안일 때만 재확인으로 인정합니다.
+function verifiedStepUp(request) {
+  const stepUp = request.stepUp;
+  return hasExactKeys(stepUp, ['authAgeSeconds', 'verified']) && stepUp.verified === true
+    && Number.isFinite(stepUp.authAgeSeconds)
+    && stepUp.authAgeSeconds >= 0 && stepUp.authAgeSeconds <= 900;
+}
+
 function stepUpResponse(request, ruleId) {
   return {
     schema: 'aleph.decision.v1',
@@ -81,7 +89,7 @@ export async function decide(request) {
     return stepUpResponse(request, RULE_IDS[1]);
   }
 
-  if (unusualAccessPattern(request)) {
+  if (unusualAccessPattern(request) && !verifiedStepUp(request)) {
     return stepUpResponse(request, RULE_IDS[2]);
   }
 

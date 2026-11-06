@@ -52,6 +52,9 @@ export async function checkDecider({ decide, ruleIds }) {
       reasonCode: 'step_up_required' },
     { name: '다시 확인한 복합 이상 접속', request: { ...suspicious,
       requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 60 } },
+    decision: 'allow', reasonCode: 'approved' },
+    { name: '재확인 시각이 계약 범위를 벗어난 복합 이상 접속', request: { ...suspicious,
+      requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 901 } },
     decision: 'step_up', reasonCode: 'step_up_required' },
   );
   const results = [];
