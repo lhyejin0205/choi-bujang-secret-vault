@@ -57,12 +57,14 @@ test('5단계 설정은 로그인 발급자, 실제 자료 API 경로, 원본 �
   assert.ok(issuer.hostname.endsWith('.supabase.co'));
   assert.equal(config.identityProvider.jwksUrl, `${config.identityProvider.issuer}/.well-known/jwks.json`);
   assert.equal(config.identityProvider.audience, 'authenticated');
-  assert.deepEqual(config.allowedRoutes, ['GET /api/notes', 'POST /api/notes', 'GET /api/notes/:id',
-    'PUT /api/notes/:id', 'DELETE /api/notes/:id', 'POST /api/login', 'POST /api/logout']);
+  // 8단계: 판정기가 허용하는 경로만 적습니다.
+  assert.deepEqual(config.allowedRoutes, ['GET /api/notes/:id', 'GET /api/notices', 'GET /api/notices/:id']);
   assert.equal(/sb_secret_|service_role/u.test(JSON.stringify(config)), false);
   assert.deepEqual(vercel.rewrites, [{ source: '/api/notes/:id', destination: '/api/notes?id=:id' },
     { source: '/api/login', destination: '/api/notes?session=login' },
-    { source: '/api/logout', destination: '/api/notes?session=logout' }]);
+    { source: '/api/logout', destination: '/api/notes?session=logout' },
+    { source: '/api/notices/:id', destination: '/api/notes?zone=notices&id=:id' },
+    { source: '/api/notices', destination: '/api/notes?zone=notices' }]);
   assert.match(readme, /\/api\/notes/u);
   assert.match(readme, /SUPABASE_SECRET_KEY/u);
   assert.match(readme, /verify-login/u);

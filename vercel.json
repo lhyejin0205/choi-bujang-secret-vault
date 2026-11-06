@@ -6,7 +6,9 @@
   "rewrites": [
     { "source": "/api/notes/:id", "destination": "/api/notes?id=:id" },
     { "source": "/api/login", "destination": "/api/notes?session=login" },
-    { "source": "/api/logout", "destination": "/api/notes?session=logout" }
+    { "source": "/api/logout", "destination": "/api/notes?session=logout" },
+    { "source": "/api/notices/:id", "destination": "/api/notes?zone=notices&id=:id" },
+    { "source": "/api/notices", "destination": "/api/notes?zone=notices" }
   ],
   "headers": [
     {

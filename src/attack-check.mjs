@@ -100,6 +100,35 @@ const STEP_UP_NOT_SENT = {
   observed: '미실행. 계약에 같은 로그인 재로그인 시각이 없어 실제 자료 요청을 보내지 않음',
 };
 
+// 8단계: 강사 공지 구역을 로그인 없이 읽거나 고치는 요청을 실제로 보내 응답 코드만 기록합니다.
+// 학생 계정 토큰으로 공지를 고치는 시도는 계정 토큰이 필요해 보내지 않고 미실행으로 남깁니다.
+async function checkNoticeZone(app) {
+  const send = (path, init) => fetch(new URL(path, app), { redirect: 'error', signal: timeout(), ...init });
+  const read = await send('/api/notices', { method: 'GET' });
+  let leaked = false;
+  try {
+    const data = await read.json();
+    leaked = read.ok && Array.isArray(data) && data.length > 0;
+  } catch {
+    leaked = false;
+  }
+  const write = await send('/api/notices/n-001', {
+    method: 'PUT', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ title: 'attack-check', body: 'attack-check', role: 'instructor' }),
+  });
+  return [
+    { attackId: 'anonymous_notices_read', expected: '로그인 없이 /api/notices에서 강사 공지를 확인',
+      observed: leaked ? `로그인 없는 공지 목록 요청에서 자료가 반환됨 (HTTP ${read.status})`
+        : `로그인 없는 공지 목록 요청에서 자료가 반환되지 않음 (HTTP ${read.status})` },
+    { attackId: 'anonymous_notice_update', expected: '로그인 없이 본문에 role을 넣어 강사 공지를 PUT',
+      observed: write.status >= 200 && write.status < 300
+        ? `로그인 없는 공지 수정이 받아들여짐 (HTTP ${write.status})`
+        : `로그인 없는 공지 수정이 거부됨 (HTTP ${write.status})` },
+    { attackId: 'student_updates_notice', expected: '학생 시험 계정으로 강사 공지를 PUT /api/notices/:id',
+      observed: '미실행. 학생 계정 토큰이 필요해 이 점검에서는 보내지 않음' },
+  ];
+}
+
 async function checkOriginalApiClosed(config, env) {
   const url = originalUrl(config);
   const key = publishableKey(env);
@@ -129,13 +158,14 @@ async function checkOriginalApiClosed(config, env) {
 }
 
 export async function runAttackChecks(config, env = process.env) {
-  if (![1, 2, 3, 4, 5, 6, 7].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 2, 3, 4, 5, 6, 7, 8].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
   if (config.step >= 5) {
     const results = [...await checkLoginRequired(app), await checkOriginalApiClosed(config, env),
       ...OWNER_ATTACKS.map(([attackId, expected]) => ({ attackId, expected, observed: notSent }))];
-    if (config.step === 7) results.push(STEP_UP_NOT_SENT);
+    if (config.step >= 7) results.push(STEP_UP_NOT_SENT);
+    if (config.step >= 8) results.push(...await checkNoticeZone(app));
     return results;
   }
   if (config.step === 4) {

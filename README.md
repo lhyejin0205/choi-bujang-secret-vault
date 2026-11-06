@@ -1,4 +1,4 @@
-# BYTE BACK 방어전 · 7단계 저장점
+# BYTE BACK 방어전 · 8단계 저장점
 
 모든 메모는 실습용 가상 자료입니다. 실제 개인정보, 비밀번호, 토큰, 서버 전용 키를 코드·Git·채팅에 넣지 마세요. 코딩 도구에는 [AGENTS.md](AGENTS.md)를 먼저 읽히세요.
 
@@ -13,6 +13,7 @@
 | 5 | 자료 요청을 서버 함수 한곳으로 모음: 브라우저의 Supabase 직접 자료 호출은 원래 없음(확인), `public.notes`의 PUBLIC·anon·authenticated 직접 권한 회수 SQL, `originalApiUrl` 기록, 원본 API 자기 점검 (`6141b8a`). 이어서 가점 작업으로 로그인·로그아웃도 서버 함수로 옮겨 화면 코드에서 Supabase 키·SDK 제거 |
 | 6 | 판정 요청의 등록 기기·가명 사용자·확인된 기기 ID와 `notes` 읽기 경로(`GET /notes`, `GET /notes/:id`)를 함께 확인합니다. 미등록·확인값 누락·다른 경로/동작은 `device_not_registered`로 거부 (`19efa2d`) |
 | 7 | 출처가 명시된 가상 신호만 검사하고, 야간·처음 보는 네트워크·5분 안의 대량 읽기가 함께 있을 때 `step_up_required`로 추가 확인을 요청하고, 계약의 `stepUp`으로 재확인을 마친 요청은 허용합니다. 지역만으로 차단하지 않습니다. 동일 로그인 재확인 시각 계약이 없어 실제 자료 차단·재로그인은 미실행 (`2c941aa`, 야간 시간대 보정 `cd89d13`, 저장점 `839eebb`, 세 신호 AND 규칙 `ad0968a`, fixture 결과 차이 검사 `1d4002a`, 시작 틀 사건 낱말 `e5e2710`, 재확인 반영 `01867ec`) |
+| 8 | 자원을 구역으로 나눔: 메모 `note:<id>`·강사 공지 `notice:<id>` 자원 ID, 판정기의 구역별 정확한 경로 규칙(`resource_zone`), 공지 쓰기의 저장된 강사 권한 대조와 짧은 거부 사유 기록. `allowedRoutes`는 판정기 허용 경로 세 개 (8단계 저장점) |
 
 ## 현재 동작
 
@@ -35,8 +36,11 @@
 - **기기 등록 판정(6단계):** `src/decider.mjs`는 계약에 있는 `deviceRegistered`, `subjectId`, `deviceId`, `service`, `method`, `path`, `route`만 확인합니다. 등록된 확인 기기의 자료 읽기 경로만 `allow`하고, 미등록·확인값 누락·쓰기/다른 경로는 `deny`와 `device_not_registered`를 반환합니다. `npm run decider:test`는 가상 요청 연습이며 실제 기기 접속이나 심판 판정이 아닙니다.
 - **접속 정보 판정(7단계):** 판정기는 계약의 `signals`와 `recentEvents`를 그대로 검사하며, 누락·형식 오류·`judge_fixture`가 아닌 출처는 정상값으로 채우지 않고 `step_up_required`로 보냅니다. `judge_fixture`는 가상 연습에만 쓰입니다. 0–5시 또는 22–23시(6시~21시는 정상)·처음 보는 네트워크(`first_seen` 또는 시작 틀의 `unusual`)·최근 5분 다량 읽기 사건(`bulk_read` 또는 시작 틀의 `risk_signal`) 20건 이상이 모두 있을 때만 `unusual_access_pattern`과 `step_up_required`로 추가 확인하고, 지역만으로 차단하지 않습니다. 같은 복합 이상 요청이라도 계약의 `stepUp`이 `verified: true`이고 `authAgeSeconds`가 0~900초이면 재확인을 마친 것으로 보고 `allow`합니다. 재확인이 없거나 범위를 벗어나면 그대로 `step_up_required`입니다. 계약에는 동일 로그인 재로그인 시각이 없어 실제 자료 차단은 시험하지 않았습니다.
 - **XDR known-CVE 보너스:** `xdr/known-cve/decide.mjs`는 파일 입출력 없이 CVE-2021-44228 형태 JNDI 요청과 점검 도구 흔적을 `block`·`alert`·`record`로 나눕니다. `npm run xdr:run -- known-cve`가 결과를 만들고 XDR의 `deny-rules.json`·`alerts.log` 연결을 시험합니다. 현재 가상 경보 24건은 block 8·alert 1·record 15이며, 시간순 재생에서 정상 이벤트 차단은 0건이었습니다. 오래된 fixture의 규칙은 만료 처리됩니다. 이는 운영 ZTNA 접속 경로의 실시간 차단 증거가 아닙니다.
-- **설정 `aleph.config.json`:** `step`은 7, `identityProvider`는 Supabase Auth의 발급자(`…/auth/v1`), 대상(`authenticated`), 공개키 주소(`…/.well-known/jwks.json`)이며 비밀 키는 들어 있지 않습니다. `allowedRoutes`는 위 일곱 경로, `originalApiUrl`은 쿼리 없는 원본 자료 주소입니다.
-- **라우팅 `vercel.json`:** `/api/notes/:id`를 `/api/notes?id=:id`로, `/api/login`·`/api/logout`을 `/api/notes?session=login|logout`으로 넘겨 함수 파일 하나(`api/notes.js`)가 처리합니다. 시작 틀의 서버 함수 기준표(`package/baseline-functions.json`)에 맞춰 함수 파일을 늘리지 않았습니다. 빌드는 `public/aleph.json`에 저장소·커밋·배포 주소와 단계를 기록하고, `data.json`이 남아 있으면 실패합니다.
+- **자원 구역(8단계):** `src/resources.mjs`가 메모는 `note:<UUID>`(목록 `note:list`), 강사 공지는 `notice:<공지 ID>`(목록 `notice:list`)로 자원 ID를 정하고, 자료 API가 요청마다 응답 머리글 `x-resource-kind`·`x-resource-id`에 남깁니다. 응답 본문 모양은 그대로입니다. 강사 공지 `/api/notices`, `/api/notices/:id`(`src/notices-handler.mjs`)는 로그인한 사용자가 읽기만 하며, 공지 두 건은 코드 안의 실습용 가상 문구입니다.
+- **구역 판정(8단계):** 판정기는 등록 기기 확인 뒤 `ZONE_ROUTES`의 정확한 경로만 허용합니다. 메모는 `GET /notes/:id`(ID 형식은 좁히지 않음), 반 공지는 `GET /notices`·`GET /notices/:id`뿐입니다. 메모 전체 목록, 메모·공지 쓰기, 강사 자료 등 다른 서비스, 알 수 없는 경로, 쿼리가 붙은 요청, `:id` 아래 기능 경로는 `deny`(`resource_zone`, 이유 코드는 등록된 `device_not_registered`)입니다. 메모 주인 비교는 판정기가 아니라 자료 API가 합니다.
+- **API 권한 재대조(8단계):** 공지 쓰기는 검증된 Supabase 로그인 사용자를 서버 환경변수 `INSTRUCTOR_USER_IDS`(쉼표로 구분한 사용자 UUID)와 대조해, 목록에 없으면 403 `NOT_INSTRUCTOR`입니다. 화면 메뉴나 본문의 `role`은 보지 않습니다. 강사라도 공지 저장소가 없어 수정은 501로 받지 않습니다. 메모·공지 API는 거부할 때 `{event:'api_denied', zone, method, reason}`만 Vercel 함수 기록에 남기며 사용자 번호·토큰·본문은 넣지 않습니다.
+- **설정 `aleph.config.json`:** `step`은 8, `identityProvider`는 Supabase Auth의 발급자(`…/auth/v1`), 대상(`authenticated`), 공개키 주소(`…/.well-known/jwks.json`)이며 비밀 키는 들어 있지 않습니다. `allowedRoutes`는 판정기가 허용하는 `GET /api/notes/:id`, `GET /api/notices`, `GET /api/notices/:id` 세 경로, `originalApiUrl`은 쿼리 없는 원본 자료 주소입니다. 화면의 메모 목록·추가·수정·삭제와 로그인·로그아웃 API는 서버 함수에 그대로 있지만 판정기 허용 경로에는 넣지 않았습니다.
+- **라우팅 `vercel.json`:** `/api/notes/:id`를 `/api/notes?id=:id`로, `/api/notices(/:id)`를 `/api/notes?zone=notices(&id=:id)`로, `/api/login`·`/api/logout`을 `/api/notes?session=login|logout`으로 넘겨 함수 파일 하나(`api/notes.js`)가 처리합니다. 시작 틀의 서버 함수 기준표(`package/baseline-functions.json`)에 맞춰 함수 파일을 늘리지 않았습니다. 빌드는 `public/aleph.json`에 저장소·커밋·배포 주소와 단계를 기록하고, `data.json`이 남아 있으면 실패합니다.
 
 ## 처음 준비와 다시 실행하는 방법
 
@@ -46,7 +50,8 @@
 4. **직접 권한 회수(5단계):** `supabase/stage5-revoke.sql`을 ①→②→③ 순서로 실행합니다. PUBLIC·anon·authenticated의 `public.notes` 권한을 모두 거두고, service_role 권한과 RLS·정책은 그대로 둡니다. 4단계에서 authenticated에 준 권한도 여기서 회수됩니다.
 5. **Vercel 환경변수:** 프로젝트 Settings > Environment Variables에 `SUPABASE_URL`과 `SUPABASE_SECRET_KEY`(서버 전용 키)가 있어야 합니다. 값은 직접 입력하고 저장한 뒤 Redeploy 합니다. `SUPABASE_SECRET_KEY`는 DB 읽기·쓰기, 로그인·로그아웃, 로그인 검사에 서버에서만 쓰입니다.
 6. **시험:** `npm test`.
-7. **7단계 판정기 연습:** `npm run fixture:7`과 `npm run decider:test`를 실행합니다. 정상·지역만 다른 사건은 `allow`, 복합 이상 사건은 `step_up`, 누락·위조 출처 신호도 정상 접속 정보로 승격되지 않는지 확인합니다. 둘 다 가상 요청 연습이며 실제 심판 판정은 아닙니다.
+7. **판정기 연습(7·8단계):** `npm run fixture:7`과 `npm run decider:test`를 실행합니다. 정상·지역만 다른 사건은 `allow`, 복합 이상 사건은 `step_up`, 누락·위조 출처 신호도 정상 접속 정보로 승격되지 않는지, 메모 한 건·공지 읽기만 허용되고 메모 목록·쓰기·강사 자료·쿼리 요청은 `deny`인지 확인합니다. 둘 다 가상 요청 연습이며 실제 심판 판정은 아닙니다.
+   - **강사 권한(선택):** 강사 계정이 있으면 Vercel 환경변수 `INSTRUCTOR_USER_IDS`에 그 사용자 UUID를 넣고 Redeploy 합니다. 넣지 않으면 모든 공지 쓰기가 403입니다.
 8. **제출 묶음:** 원본 API 자기 점검에는 공개용 키가 필요합니다. 화면 코드에 키가 없으므로 `SUPABASE_PUBLISHABLE_KEY=sb_publishable_… npm run bundle`처럼 실행할 때만 넘깁니다. 키 없이 실행하면 그 점검은 미실행으로 남습니다. 가짜 검사기와 가짜 저장소로 도는 시험이며 실제 로그인이나 배포를 확인하지 않습니다.
 
 ## 확인 방법
@@ -57,11 +62,16 @@
 - A로 로그인하면 A의 네 메모만, B로 로그인하면 B 시험 메모만 보여야 합니다. B가 A 메모 id로 `GET`·`PUT`·`DELETE`하면 404, 자기 메모의 주인을 바꾸는 `PUT`은 403이어야 합니다.
 - 원본 직접 요청: publishable 키로 `/rest/v1/notes`를 직접 부르면 자료 없이 거부되어야 합니다(심판이 anon 키로 확인). `npm run bundle`의 자기 점검도 같은 요청을 한 번 보내 결과를 기록합니다.
 - 판정기 연습: `npm run fixture:7` 또는 `npm run decider:test`를 실행합니다. 정상 및 지역만 다른 사건은 허용되고, 야간·새 네트워크·대량 읽기의 복합 사건과 위조·누락 출처는 추가 확인으로 가야 합니다. 가상 연습 결과는 실제 접속 또는 심판 판정 증거가 아닙니다.
+- 구역(8단계): 로그인 뒤 `/api/notices`와 본인 메모 `/api/notes/:id`는 200이고 응답 머리글 `x-resource-id`가 각각 `notice:list`, `note:<id>`여야 합니다. 로그인 없이 `/api/notices`는 401, 학생 계정으로 `PUT /api/notices/n-001`은 403 `NOT_INSTRUCTOR`, 남의 메모 id는 404여야 합니다.
 - 화면 원본(Ctrl+U)에서 `sb_publishable`·`supabase`를 찾으면 0건이어야 합니다.
 - 공개 파일 검색은 아래 한 줄입니다. 결과가 비어 있어야 정상입니다.
   `git grep -n -E "실습용 가상 (과제|포트폴리오|리추얼|행정) 기록" origin/main`
 
-## 알려진 약점 (7단계 기준)
+## 알려진 약점 (8단계 기준)
+
+- 강사 공지는 코드 안의 가상 문구라 강사도 고칠 수 없습니다. 공지 저장소와 강사 관리 경로는 아직 없습니다.
+- 강사 권한은 서버 환경변수의 사용자 UUID 목록에 달려 있어, 바꾸려면 Vercel 설정을 고치고 다시 배포해야 합니다.
+- `/api/notices`는 내부적으로 `/api/notes?zone=notices`로 넘어가므로 그 쿼리 주소로도 같은 공지 API(로그인·권한 검사 포함)에 닿습니다. 판정기는 쿼리가 붙은 요청을 거부합니다.
 
 - 토큰 검사는 서명과 만료를 확인합니다. 로그아웃해도 이미 발급된 토큰은 만료 전까지 검사를 통과할 수 있습니다.
 - 브라우저에 refresh token을 주지 않으므로 접근 토큰이 만료되면(보통 1시간) 다시 로그인해야 합니다.

@@ -57,6 +57,31 @@ export async function checkDecider({ decide, ruleIds }) {
       requestId: randomUUID(), stepUp: { verified: true, authAgeSeconds: 901 } },
     decision: 'step_up', reasonCode: 'step_up_required' },
   );
+  // 8단계 구역 규칙: 정확한 경로 모양만 허용하고 나머지는 모두 거부합니다.
+  const at = (method, service, route, path, extra = {}) => ({ ...normal,
+    requestId: randomUUID(), method, service, route, path, ...extra });
+  checks.push(
+    { name: 'UUID가 아닌 ID로 메모 한 건 읽기', request: at('GET', 'notes', 'GET /notes/:id', '/notes/note-a1'),
+      decision: 'allow', reasonCode: 'approved' },
+    { name: '메모 전체 목록', request: at('GET', 'notes', 'GET /notes', '/notes'), decision: 'deny' },
+    { name: '메모 수정', request: at('PUT', 'notes', 'PUT /notes/:id', '/notes/note-a1'), decision: 'deny' },
+    { name: '쿼리로 기능을 고른 메모 요청', request: at('GET', 'notes', 'GET /notes/:id', '/notes/note-a1',
+      { queryLength: 13 }), decision: 'deny' },
+    { name: 'ID 아래 기능 경로', request: at('GET', 'notes', 'GET /notes/:id', '/notes/note-a1/export'),
+      decision: 'deny' },
+    { name: '반 공지 목록 읽기', request: at('GET', 'notices', 'GET /notices', '/notices'),
+      decision: 'allow', reasonCode: 'approved' },
+    { name: '반 공지 한 건 읽기', request: at('GET', 'notices', 'GET /notices/:id', '/notices/n-001'),
+      decision: 'allow', reasonCode: 'approved' },
+    ...['POST', 'PUT', 'PATCH', 'DELETE'].map(method => ({ name: `반 공지 ${method}`,
+      request: at(method, 'notices', method === 'POST' ? `${method} /notices` : `${method} /notices/:id`,
+        method === 'POST' ? '/notices' : '/notices/n-001'), decision: 'deny' })),
+    { name: '강사 자료 읽기', request: at('GET', 'materials', 'GET /materials/:id', '/materials/m-1'),
+      decision: 'deny' },
+    { name: '서비스와 경로가 다른 요청', request: at('GET', 'notices', 'GET /notes/:id', '/notes/note-a1'),
+      decision: 'deny' },
+    { name: '알 수 없는 경로', request: at('GET', 'notes', 'GET /admin', '/admin'), decision: 'deny' },
+  );
   const results = [];
   for (const item of checks) {
     const response = await decide(item.request);

@@ -5,7 +5,37 @@ export const RULE_IDS = Object.freeze([
   'connection_context_verified',
   'unusual_access_pattern',
   'step_up_required',
+  'resource_zone',
 ]);
+
+// 8단계: 자원 구역별로 허용하는 서비스·동작·정확한 경로 모양입니다. 여기 없는 요청은 모두 거부합니다.
+// - 메모(notes): 자료 ID 하나를 고르는 읽기만. ID 없는 전체 목록(/notes)은 거부합니다.
+// - 반 공지(notices): 읽기(GET)만. 쓰기는 누구에게나 거부하고, 강사 수정은 서버의 관리 경로가 맡습니다.
+// - 강사 자료 등 그 밖의 서비스·경로: 판정기에서 모두 거부합니다.
+// ID 형식은 좁히지 않고(심판 요청은 UUID가 아닐 수 있음) 경로 한 칸만 봅니다.
+// 메모 주인 비교는 자료 API가 맡으며, 쿼리로 기능을 고르는 요청은 받지 않습니다.
+const ZONE_ROUTES = Object.freeze([
+  Object.freeze({ service: 'notes', route: 'GET /notes/:id', path: /^\/notes\/[^/?#]+$/u }),
+  Object.freeze({ service: 'notices', route: 'GET /notices', path: /^\/notices$/u }),
+  Object.freeze({ service: 'notices', route: 'GET /notices/:id', path: /^\/notices\/[^/?#]+$/u }),
+]);
+
+function allowedZoneRoute(request) {
+  return request?.method === 'GET' && request.queryLength === 0
+    && typeof request.path === 'string'
+    && ZONE_ROUTES.some(zone => zone.service === request.service
+      && zone.route === request.route && zone.path.test(request.path));
+}
+
+function denyResponse(request, ruleId) {
+  return {
+    schema: 'aleph.decision.v1',
+    requestId: request?.requestId,
+    decision: 'deny',
+    reasonCode: 'device_not_registered',
+    ruleIds: [ruleId],
+  };
+}
 
 const SIGNAL_KEYS = ['hour', 'network', 'region', 'source'];
 const EVENT_KEYS = ['ageSeconds', 'count', 'kind'];
@@ -72,18 +102,8 @@ export async function decide(request) {
   const registeredDevice = request?.deviceRegistered === true
     && typeof request.subjectId === 'string' && request.subjectId.length > 0
     && typeof request.deviceId === 'string' && /^[0-9a-f]{16}$/u.test(request.deviceId);
-  const readRoute = request?.service === 'notes' && request.method === 'GET'
-    && ((request.route === 'GET /notes' && request.path === '/notes')
-      || (request.route === 'GET /notes/:id' && /^\/notes\/[^/]+$/u.test(request.path)));
-  if (!registeredDevice || !readRoute) {
-    return {
-      schema: 'aleph.decision.v1',
-      requestId: request?.requestId,
-      decision: 'deny',
-      reasonCode: 'device_not_registered',
-      ruleIds: [RULE_IDS[0]],
-    };
-  }
+  if (!registeredDevice) return denyResponse(request, RULE_IDS[0]);
+  if (!allowedZoneRoute(request)) return denyResponse(request, RULE_IDS[4]);
 
   if (!hasCompleteFixtureContext(request)) {
     return stepUpResponse(request, RULE_IDS[1]);

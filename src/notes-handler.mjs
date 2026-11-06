@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { markResource, markResourceKind } from './resources.mjs';
 
 // 자료 API. 모든 요청은 먼저 verifyLogin(src/verify-login.mjs)으로 토큰을 검사합니다.
 // 사용자 번호는 검사를 통과한 토큰에서만 얻습니다. URL·본문의 userId·role·owner_id는 믿지 않습니다.
@@ -57,12 +58,21 @@ const triesOtherOwner = (body, userId) => OWNER_KEYS.some(key => body
 const noteOut = row => ({ id: row.id, title: row.title, body: row.content });
 
 export async function handleNotesRequest(request, response, options = {}) {
-  const { env = process.env, fetchImpl = globalThis.fetch, verifyLogin } = options;
+  const { env = process.env, fetchImpl = globalThis.fetch, verifyLogin, log = () => {} } = options;
+  // 8단계: 거부할 때 짧은 사유를 서버 기록에 남깁니다. 사용자 번호·토큰·메모 본문은 넣지 않습니다.
+  const deny = (status, body, reason) => {
+    log({ event: 'api_denied', zone: 'note', method: request.method, reason });
+    return sendJson(response, status, body);
+  };
   const id = routeId(request);
+  // 8단계: 메모 구역의 자원 ID(note:list 또는 note:<UUID>)를 응답 머리글에 남깁니다.
+  if (id === undefined) markResource(response, 'note');
+  else if (UUID.test(id)) markResource(response, 'note', id);
+  else markResourceKind(response, 'note');
   const allowed = id === undefined ? ['GET', 'POST'] : ['GET', 'PUT', 'DELETE'];
   if (!allowed.includes(request.method)) {
     response.setHeader('allow', allowed.join(', '));
-    return sendJson(response, 405, { error: 'METHOD_NOT_ALLOWED' });
+    return deny(405, { error: 'METHOD_NOT_ALLOWED' }, 'method');
   }
 
   // 1) 로그인 검사. 토큰이 없거나 검사에 실패하면 자료 없이 거부합니다.
@@ -75,7 +85,7 @@ export async function handleNotesRequest(request, response, options = {}) {
   }
   if (!user || typeof user.userId !== 'string' || !UUID.test(user.userId)) {
     response.setHeader('www-authenticate', 'Bearer');
-    return sendJson(response, 401, { error: 'UNAUTHORIZED' });
+    return deny(401, { error: 'UNAUTHORIZED' }, 'no_valid_login');
   }
 
   // 2) 데이터베이스 설정
@@ -126,14 +136,16 @@ export async function handleNotesRequest(request, response, options = {}) {
         id: wantedId ?? randomUUID(), owner_id: user.userId, ...fields,
       }, 'return=representation');
       // 다른 사람 메모의 id를 골라 보내도 덮어쓰지 않고 409로 끝납니다.
-      if (result.status === 409) return sendJson(response, 409, { error: 'ID_ALREADY_EXISTS' });
+      if (result.status === 409) return deny(409, { error: 'ID_ALREADY_EXISTS' }, 'id_taken');
       if (!result.ok) return fail();
       const rows = await readRows(result);
       return rows?.length === 1 ? sendJson(response, 201, { id: rows[0].id }) : fail();
     }
 
     // 한 건: 형식이 맞지 않는 id는 없는 메모와 같게 404로 답합니다.
-    if (!UUID.test(id)) return sendJson(response, 404, { error: 'NOT_FOUND' });
+    if (!UUID.test(id)) return deny(404, { error: 'NOT_FOUND' }, 'bad_id');
+    // 남의 메모와 없는 메모는 응답으로 구별하지 않고, 기록에도 같은 사유로 남깁니다.
+    const notMine = () => deny(404, { error: 'NOT_FOUND' }, 'not_owner_or_missing');
     // 한 건 요청은 항상 "이 id이면서 주인이 본인인 행"만 대상으로 합니다.
     const target = { id: `eq.${id}`, ...mine };
 
@@ -142,7 +154,7 @@ export async function handleNotesRequest(request, response, options = {}) {
       if (!result.ok) return fail();
       const rows = await readRows(result);
       if (!rows) return fail();
-      return rows.length ? sendJson(response, 200, noteOut(rows[0])) : sendJson(response, 404, { error: 'NOT_FOUND' });
+      return rows.length ? sendJson(response, 200, noteOut(rows[0])) : notMine();
     }
 
     if (request.method === 'PUT') {
@@ -150,14 +162,16 @@ export async function handleNotesRequest(request, response, options = {}) {
       const fields = noteFields(body);
       if (!fields) return sendJson(response, 400, { error: 'INVALID_BODY' });
       // 주인 바꾸기는 거부합니다.
-      if (triesOtherOwner(body, user.userId)) return sendJson(response, 403, { error: 'OWNER_CHANGE_FORBIDDEN' });
+      if (triesOtherOwner(body, user.userId)) {
+        return deny(403, { error: 'OWNER_CHANGE_FORBIDDEN' }, 'owner_change');
+      }
       // 기존 행: 필터로 본인 행만 고릅니다. 새 행: owner_id를 본인으로 다시 적고, 돌려받은 행도 확인합니다.
       const result = await upstream('PATCH', { select, ...target },
         { ...fields, owner_id: user.userId }, 'return=representation');
       if (!result.ok) return fail();
       const rows = await readRows(result);
       if (!rows) return fail();
-      return rows.length ? sendJson(response, 200, noteOut(rows[0])) : sendJson(response, 404, { error: 'NOT_FOUND' });
+      return rows.length ? sendJson(response, 200, noteOut(rows[0])) : notMine();
     }
 
     // DELETE
@@ -165,7 +179,7 @@ export async function handleNotesRequest(request, response, options = {}) {
     if (!result.ok) return fail();
     const rows = await readRows(result);
     if (!rows) return fail();
-    return rows.length ? sendJson(response, 200, { id }) : sendJson(response, 404, { error: 'NOT_FOUND' });
+    return rows.length ? sendJson(response, 200, { id }) : notMine();
   } catch {
     return fail();
   }
