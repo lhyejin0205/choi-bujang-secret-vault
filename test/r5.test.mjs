@@ -97,14 +97,16 @@ test('step 3 attack check sends only anonymous and forged-token requests and rec
     assert.ok(sent.every(entry => entry.url === 'https://student-defense.vercel.app/api/notes'));
     assert.deepEqual(results.map(item => item.attackId),
       ['anonymous_notes_read', 'anonymous_notes_create', 'forged_token_notes_read', 'login_a_notes_read']);
-    assert.match(results[0].observed, /반환되지 않음 \(HTTP 401\)/u);
+    // 보낸 요청은 실제로 받은 HTTP 상태 코드만 적습니다.
+    assert.equal(results[0].observed, '401');
     assert.equal(results[1].observed, 'not_run');
+    assert.equal(results[2].observed, '401');
     assert.match(results[3].observed, /^미실행/u);
     assert.equal(JSON.stringify(results).includes('aaaaaaaaaa'), false);
 
     globalThis.fetch = async () => new Response(JSON.stringify([{ id: 'x' }]), { status: 200 });
     const leaked = await runAttackChecks({ ...config, step: 3 });
-    assert.match(leaked[0].observed, /자료가 반환됨/u);
+    assert.equal(leaked[0].observed, '200');
     assert.equal(leaked[1].observed, 'not_run');
     await assert.rejects(() => runAttackChecks({ ...config, step: 6 }));
   } finally {
@@ -210,6 +212,13 @@ test('step 12 attack check sends only GET requests and leaves write checks as no
     for (const attackId of ['anonymous_notes_create', 'anonymous_notice_update', 'anonymous_restore_call', 'anonymous_device_approval']) {
       assert.equal(results.find(item => item.attackId === attackId).observed, 'not_run', attackId);
     }
+    // 실제로 보낸 GET 점검 5개는 받은 HTTP 상태 코드를 그대로 적습니다.
+    const sentChecks = ['anonymous_notes_read', 'forged_token_notes_read', 'anonymous_notices_read',
+      'forged_device_signature_read', 'anonymous_ops_summary'];
+    for (const attackId of sentChecks) {
+      assert.equal(results.find(item => item.attackId === attackId).observed, '401', attackId);
+    }
+    assert.equal(sent.length, sentChecks.length);
   } finally {
     globalThis.fetch = originalFetch;
   }

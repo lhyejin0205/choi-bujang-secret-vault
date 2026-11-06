@@ -24,20 +24,11 @@ export const WRITE_NOT_RUN = 'not_run';
 // 3단계: 로그인 없이, 또는 가짜 토큰으로 자료 API를 불러 실제 응답을 기록합니다.
 // 정상 A 로그인 요청은 계정 비밀번호가 필요하므로 여기서 보내지 않습니다.
 async function checkLoginRequired(app) {
+  // 12단계: 보낸 요청의 observed 에는 실제로 받은 HTTP 상태 코드만 적습니다.
   const probe = async (init) => {
     const response = await fetch(new URL('/api/notes', app), { redirect: 'error', signal: timeout(), ...init });
-    let leaked = false;
-    try {
-      const data = await response.json();
-      leaked = response.ok && (Array.isArray(data) ? data.length > 0 : typeof data?.id === 'string');
-    } catch {
-      leaked = false;
-    }
-    return { status: response.status, leaked };
+    return { status: response.status };
   };
-  const describe = ({ status, leaked }, what) => leaked
-    ? `${what}에서 자료가 반환됨 (HTTP ${status})`
-    : `${what}에서 자료가 반환되지 않음 (HTTP ${status})`;
   const anonymousRead = await probe({ method: 'GET' });
   // 서명이 없는 가짜 토큰입니다. 세 조각 모양만 갖추고 검사를 통과할 수 없습니다.
   const forgedToken = ['aaaaaaaaaa', 'bbbbbbbbbb', 'cccccccccc'].join('.');
@@ -46,11 +37,11 @@ async function checkLoginRequired(app) {
   });
   return [
     { attackId: 'anonymous_notes_read', expected: '로그인 없이 /api/notes에서 메모를 확인',
-      observed: describe(anonymousRead, '로그인 없는 목록 요청') },
+      observed: String(anonymousRead.status) },
     { attackId: 'anonymous_notes_create', expected: '로그인 없이 /api/notes에 메모를 추가',
       observed: WRITE_NOT_RUN },
     { attackId: 'forged_token_notes_read', expected: '검사를 통과하지 못하는 가짜 토큰으로 메모를 확인',
-      observed: describe(forgedRead, '가짜 토큰 목록 요청') },
+      observed: String(forgedRead.status) },
     { attackId: 'login_a_notes_read', expected: '정상 A 로그인 뒤에는 메모가 보임',
       observed: '미실행. 계정 비밀번호가 필요해 이 점검에서는 보내지 않음. 심판이 확인함' },
   ];
@@ -104,17 +95,9 @@ const STEP_UP_NOT_SENT = {
 async function checkNoticeZone(app) {
   const send = (path, init) => fetch(new URL(path, app), { redirect: 'error', signal: timeout(), ...init });
   const read = await send('/api/notices', { method: 'GET' });
-  let leaked = false;
-  try {
-    const data = await read.json();
-    leaked = read.ok && Array.isArray(data) && data.length > 0;
-  } catch {
-    leaked = false;
-  }
   return [
     { attackId: 'anonymous_notices_read', expected: '로그인 없이 /api/notices에서 강사 공지를 확인',
-      observed: leaked ? `로그인 없는 공지 목록 요청에서 자료가 반환됨 (HTTP ${read.status})`
-        : `로그인 없는 공지 목록 요청에서 자료가 반환되지 않음 (HTTP ${read.status})` },
+      observed: String(read.status) },
     { attackId: 'anonymous_notice_update', expected: '로그인 없이 본문에 role을 넣어 강사 공지를 PUT',
       observed: WRITE_NOT_RUN },
     { attackId: 'student_updates_notice', expected: '학생 시험 계정으로 강사 공지를 PUT /api/notices/:id',
@@ -148,19 +131,11 @@ async function checkDeviceApproval(app) {
   const forged = await send('/api/notes', {
     method: 'GET', headers: { 'x-device-key': '0'.repeat(64), 'x-device-time': String(Date.now()), 'x-device-signature': 'A'.repeat(86) },
   });
-  let leaked = false;
-  try {
-    const data = await forged.json();
-    leaked = forged.ok && Array.isArray(data) && data.length > 0;
-  } catch {
-    leaked = false;
-  }
   return [
     { attackId: 'anonymous_device_approval', expected: '로그인 없이 본문에 status:approved를 넣어 기기를 등록',
       observed: WRITE_NOT_RUN },
     { attackId: 'forged_device_signature_read', expected: '지어낸 기기 서명 머리글만으로 /api/notes에서 메모를 확인',
-      observed: leaked ? `지어낸 서명 요청에서 자료가 반환됨 (HTTP ${forged.status})`
-        : `지어낸 서명 요청에서 자료가 반환되지 않음 (HTTP ${forged.status})` },
+      observed: String(forged.status) },
     { attackId: 'signed_request_tampered', expected: '로그인한 계정으로 서명 없이, 또는 서명 뒤 경로·본문을 바꿔 보호 요청',
       observed: '미실행. 계정 토큰과 승인된 기기가 필요해 이 점검에서는 보내지 않음' },
   ];
@@ -169,16 +144,8 @@ async function checkDeviceApproval(app) {
 // 12단계: 탈환 작전실 요약 GET /api/ops 를 로그인 없이 부르는 요청을 실제로 보내 응답 코드만 기록합니다.
 async function checkOpsClosed(app) {
   const response = await fetch(new URL('/api/ops', app), { redirect: 'error', signal: timeout() });
-  let leaked = false;
-  try {
-    const data = await response.json();
-    leaked = response.ok && data !== null && typeof data === 'object' && 'revocation' in data;
-  } catch {
-    leaked = false;
-  }
   return { attackId: 'anonymous_ops_summary', expected: '로그인 없이 /api/ops에서 작전실 요약(기기·복원 기록)을 확인',
-    observed: leaked ? `로그인 없는 작전실 요청에서 요약이 반환됨 (HTTP ${response.status})`
-      : `로그인 없는 작전실 요청에서 요약이 반환되지 않음 (HTTP ${response.status})` };
+    observed: String(response.status) };
 }
 
 async function checkOriginalApiClosed(config, env) {
