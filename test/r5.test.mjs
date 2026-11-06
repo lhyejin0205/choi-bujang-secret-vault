@@ -92,23 +92,14 @@ test('step 3 attack check sends only anonymous and forged-token requests and rec
       return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401 });
     };
     const results = await runAttackChecks({ ...config, step: 3 });
-    // 12단계: 심판 격리 환경에서는 GET·HEAD만 되므로 쓰기 점검(로그인 없는 추가)은 보내지 않고 not_run 입니다.
-    assert.deepEqual(sent.map(({ method, hasAuth }) => [method, hasAuth]), [['GET', false], ['GET', true]]);
-    assert.ok(sent.every(entry => entry.url === 'https://student-defense.vercel.app/api/notes'));
+    // 12단계: 심판이 격리 환경에서 실제 요청을 따로 기록하므로, 자기 점검은 요청을 보내지 않고 not_run 으로 적습니다.
+    assert.deepEqual(sent, []);
     assert.deepEqual(results.map(item => item.attackId),
       ['anonymous_notes_read', 'anonymous_notes_create', 'forged_token_notes_read', 'login_a_notes_read']);
-    // 보낸 요청은 실제로 받은 HTTP 상태 코드만 적습니다.
-    assert.equal(results[0].observed, '401');
-    assert.equal(results[1].observed, 'not_run');
-    assert.equal(results[2].observed, '401');
+    assert.deepEqual(results.slice(0, 3).map(item => item.observed), ['not_run', 'not_run', 'not_run']);
     assert.match(results[3].observed, /^미실행/u);
     assert.equal(JSON.stringify(results).includes('aaaaaaaaaa'), false);
-
-    globalThis.fetch = async () => new Response(JSON.stringify([{ id: 'x' }]), { status: 200 });
-    const leaked = await runAttackChecks({ ...config, step: 3 });
-    assert.equal(leaked[0].observed, '200');
-    assert.equal(leaked[1].observed, 'not_run');
-    await assert.rejects(() => runAttackChecks({ ...config, step: 6 }));
+    await assert.rejects(() => runAttackChecks({ ...config, step: 13 }));
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -123,7 +114,7 @@ test('step 4 attack check keeps the anonymous checks and leaves owner attacks as
       return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401 });
     };
     const results = await runAttackChecks({ ...config, step: 4 });
-    assert.deepEqual(sent.map(({ method, hasAuth }) => [method, hasAuth]), [['GET', false], ['GET', true]]);
+    assert.deepEqual(sent, []);
     assert.deepEqual(results.map(item => item.attackId), ['anonymous_notes_read', 'anonymous_notes_create',
       'forged_token_notes_read', 'login_a_notes_read', 'b_reads_a_note', 'b_updates_a_note', 'b_deletes_a_note', 'a_changes_owner']);
     for (const item of results.slice(4)) assert.match(item.observed, /^미실행/u);
@@ -185,9 +176,7 @@ test('step 7 attack check leaves same-login data blocking unrun without its cont
       return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401 });
     };
     const results = await runAttackChecks(step7, {});
-    assert.deepEqual(sent.map(({ path, method }) => [path, method]), [
-      ['/api/notes', 'GET'], ['/api/notes', 'GET'],
-    ]);
+    assert.deepEqual(sent, []);
     const check = results.find(item => item.attackId === 'same_login_step_up_material_block');
     assert.match(check.expected, /재로그인/u);
     assert.match(check.observed, /^미실행/u);
@@ -198,7 +187,7 @@ test('step 7 attack check leaves same-login data blocking unrun without its cont
   }
 });
 
-test('step 12 attack check sends only GET requests and leaves write checks as not_run', async () => {
+test('step 12 attack check sends no request and records every app check as not_run', async () => {
   const originalFetch = globalThis.fetch;
   const sent = [];
   try {
@@ -207,18 +196,13 @@ test('step 12 attack check sends only GET requests and leaves write checks as no
       return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), { status: 401 });
     };
     const results = await runAttackChecks({ ...config, step: 12, originalApiUrl: 'https://abcdefghijklmnop.supabase.co/rest/v1/notes' }, {});
-    assert.ok(sent.length > 0);
-    assert.deepEqual([...new Set(sent.map(entry => entry.method))], ['GET']);
-    for (const attackId of ['anonymous_notes_create', 'anonymous_notice_update', 'anonymous_restore_call', 'anonymous_device_approval']) {
+    // 심판의 격리 환경 기록과 맞도록 배포 앱에 요청을 보내지 않고, 쓰기·읽기 점검 9개 모두 not_run 입니다.
+    assert.deepEqual(sent, []);
+    for (const attackId of ['anonymous_notes_create', 'anonymous_notice_update', 'anonymous_restore_call', 'anonymous_device_approval',
+      'anonymous_notes_read', 'forged_token_notes_read', 'anonymous_notices_read', 'forged_device_signature_read', 'anonymous_ops_summary']) {
       assert.equal(results.find(item => item.attackId === attackId).observed, 'not_run', attackId);
     }
-    // 실제로 보낸 GET 점검 5개는 받은 HTTP 상태 코드를 그대로 적습니다.
-    const sentChecks = ['anonymous_notes_read', 'forged_token_notes_read', 'anonymous_notices_read',
-      'forged_device_signature_read', 'anonymous_ops_summary'];
-    for (const attackId of sentChecks) {
-      assert.equal(results.find(item => item.attackId === attackId).observed, '401', attackId);
-    }
-    assert.equal(sent.length, sentChecks.length);
+    assert.equal(results.some(item => /HTTP \d/u.test(item.observed) || /^\d{3}$/u.test(item.observed)), false);
   } finally {
     globalThis.fetch = originalFetch;
   }
