@@ -12,7 +12,7 @@
 | 4 | 자료 API의 소유자 검사(본인 메모만 읽기·추가·수정·삭제, 주인 바꾸기 거부), 가상 메모 네 건을 A 소유로 연결, `public.notes` RLS·최소 권한 SQL (`6a7345c`) |
 | 5 | 자료 요청을 서버 함수 한곳으로 모음: 브라우저의 Supabase 직접 자료 호출은 원래 없음(확인), `public.notes`의 PUBLIC·anon·authenticated 직접 권한 회수 SQL, `originalApiUrl` 기록, 원본 API 자기 점검 (`6141b8a`). 이어서 가점 작업으로 로그인·로그아웃도 서버 함수로 옮겨 화면 코드에서 Supabase 키·SDK 제거 |
 | 6 | 판정 요청의 등록 기기·가명 사용자·확인된 기기 ID와 `notes` 읽기 경로(`GET /notes`, `GET /notes/:id`)를 함께 확인합니다. 미등록·확인값 누락·다른 경로/동작은 `device_not_registered`로 거부 (`19efa2d`) |
-| 7 | 출처가 명시된 가상 신호만 검사하고, 야간·처음 보는 네트워크·5분 안의 대량 읽기가 함께 있을 때 `step_up_required`로 추가 확인을 요청합니다. 지역만으로 차단하지 않습니다. 동일 로그인 재확인 시각 계약이 없어 실제 자료 차단·재로그인은 미실행 (`2c941aa`, 야간 시간대 보정 `cd89d13`, 저장점 `839eebb`, 세 신호 AND 규칙 `ad0968a`, fixture 결과 차이 검사 `1d4002a`) |
+| 7 | 출처가 명시된 가상 신호만 검사하고, 야간·처음 보는 네트워크·5분 안의 대량 읽기가 함께 있을 때 `step_up_required`로 추가 확인을 요청하고, 계약의 `stepUp`으로 재확인을 마친 요청은 허용합니다. 지역만으로 차단하지 않습니다. 동일 로그인 재확인 시각 계약이 없어 실제 자료 차단·재로그인은 미실행 (`2c941aa`, 야간 시간대 보정 `cd89d13`, 저장점 `839eebb`, 세 신호 AND 규칙 `ad0968a`, fixture 결과 차이 검사 `1d4002a`, 시작 틀 사건 낱말 `e5e2710`, 재확인 반영 `01867ec`) |
 
 ## 현재 동작
 
@@ -33,7 +33,7 @@
 
 - **원본 자료(5단계):** 원본 자료 API는 `https://fcmjfhjbsaqggxmmjbjo.supabase.co/rest/v1/notes`이며 `originalApiUrl`에 적었습니다. PUBLIC·anon·authenticated에는 이 테이블 권한이 없어 publishable(anon) 키나 로그인 토큰으로 직접 읽거나 고칠 수 없고, 서버 전용 키를 가진 서버 함수만 접근합니다.
 - **기기 등록 판정(6단계):** `src/decider.mjs`는 계약에 있는 `deviceRegistered`, `subjectId`, `deviceId`, `service`, `method`, `path`, `route`만 확인합니다. 등록된 확인 기기의 자료 읽기 경로만 `allow`하고, 미등록·확인값 누락·쓰기/다른 경로는 `deny`와 `device_not_registered`를 반환합니다. `npm run decider:test`는 가상 요청 연습이며 실제 기기 접속이나 심판 판정이 아닙니다.
-- **접속 정보 판정(7단계):** 판정기는 계약의 `signals`와 `recentEvents`를 그대로 검사하며, 누락·형식 오류·`judge_fixture`가 아닌 출처는 정상값으로 채우지 않고 `step_up_required`로 보냅니다. `judge_fixture`는 가상 연습에만 쓰입니다. 0–5시 또는 22–23시(6시~21시는 정상)·`first_seen` 네트워크·최근 5분 `bulk_read` 20건 이상이 모두 있을 때만 `unusual_access_pattern`과 `step_up_required`로 추가 확인하고, 지역만으로 차단하지 않습니다. 계약에는 동일 로그인 재로그인 시각이 없어 실제 자료 차단은 시험하지 않았습니다.
+- **접속 정보 판정(7단계):** 판정기는 계약의 `signals`와 `recentEvents`를 그대로 검사하며, 누락·형식 오류·`judge_fixture`가 아닌 출처는 정상값으로 채우지 않고 `step_up_required`로 보냅니다. `judge_fixture`는 가상 연습에만 쓰입니다. 0–5시 또는 22–23시(6시~21시는 정상)·처음 보는 네트워크(`first_seen` 또는 시작 틀의 `unusual`)·최근 5분 다량 읽기 사건(`bulk_read` 또는 시작 틀의 `risk_signal`) 20건 이상이 모두 있을 때만 `unusual_access_pattern`과 `step_up_required`로 추가 확인하고, 지역만으로 차단하지 않습니다. 같은 복합 이상 요청이라도 계약의 `stepUp`이 `verified: true`이고 `authAgeSeconds`가 0~900초이면 재확인을 마친 것으로 보고 `allow`합니다. 재확인이 없거나 범위를 벗어나면 그대로 `step_up_required`입니다. 계약에는 동일 로그인 재로그인 시각이 없어 실제 자료 차단은 시험하지 않았습니다.
 - **XDR known-CVE 보너스:** `xdr/known-cve/decide.mjs`는 파일 입출력 없이 CVE-2021-44228 형태 JNDI 요청과 점검 도구 흔적을 `block`·`alert`·`record`로 나눕니다. `npm run xdr:run -- known-cve`가 결과를 만들고 XDR의 `deny-rules.json`·`alerts.log` 연결을 시험합니다. 현재 가상 경보 24건은 block 8·alert 1·record 15이며, 시간순 재생에서 정상 이벤트 차단은 0건이었습니다. 오래된 fixture의 규칙은 만료 처리됩니다. 이는 운영 ZTNA 접속 경로의 실시간 차단 증거가 아닙니다.
 - **설정 `aleph.config.json`:** `step`은 7, `identityProvider`는 Supabase Auth의 발급자(`…/auth/v1`), 대상(`authenticated`), 공개키 주소(`…/.well-known/jwks.json`)이며 비밀 키는 들어 있지 않습니다. `allowedRoutes`는 위 일곱 경로, `originalApiUrl`은 쿼리 없는 원본 자료 주소입니다.
 - **라우팅 `vercel.json`:** `/api/notes/:id`를 `/api/notes?id=:id`로, `/api/login`·`/api/logout`을 `/api/notes?session=login|logout`으로 넘겨 함수 파일 하나(`api/notes.js`)가 처리합니다. 시작 틀의 서버 함수 기준표(`package/baseline-functions.json`)에 맞춰 함수 파일을 늘리지 않았습니다. 빌드는 `public/aleph.json`에 저장소·커밋·배포 주소와 단계를 기록하고, `data.json`이 남아 있으면 실패합니다.
@@ -83,5 +83,6 @@
 - **2026-10-29 (5단계):** 브라우저 코드의 Supabase 직접 자료 호출은 원래 없었습니다. `public.notes` 권한 회수 전 authenticated는 SELECT·INSERT·UPDATE·DELETE가 true였고, 회수 후 public·anon·authenticated 21개 모두 false, service_role의 SELECT·INSERT·UPDATE·DELETE는 true였습니다. 회수 뒤 배포(`6141b8a`)에서 A가 메모를 읽고 추가·수정·삭제했고, `npm run bundle`의 anon 키 직접 요청은 401로 자료가 없었습니다.
 - **5단계 가점(로그인 서버 이전):** (배포 뒤 A·B 로그인·로그아웃, 틀린 비밀번호 안내, 화면 원본의 키 0건을 확인한 뒤 여기에 적으세요.)
 - **2026-11-03 (7단계 가상 판정기 연습):** `npm run fixture:7`에서 정상·지역 단독은 `allow`, 복합 이상·불명확한 출처·위조 헤더는 `step_up`이었습니다. `npm run decider:test`의 10개 가상 확인과 `npm test`의 41개 테스트, `npm run build -- --local`이 통과했습니다(야간 시간대 보정 `cd89d13` 뒤에도 다시 실행). 접속 정보의 출처가 `judge_fixture`가 아니거나 `headers` 같은 계약 밖 항목, 누락·형식 오류 신호가 있으면 모두 `step_up`이었습니다. 같은 로그인 재확인 계약이 없어 실제 자료 차단은 미실행입니다.
+- **2026-11-06 (7단계 심판 재제출):** `62fe220` 제출은 심판 기록 코드 `S07_SAME_VERDICT`(지역 급변 사건에서 정상·복합 이상 판정이 같음)로 51점이었습니다. 연습 사건을 판정기 낱말로 바꿔 둔 탓에, 시작 틀의 `unusual`·`risk_signal` 사건이 `allow`로 빠진 것이 원인이었습니다. `e5e2710`에서 두 낱말을 받게 하자 정상과 복합 이상은 구분됐지만, 재확인한 복합 이상 요청이 `step_up`으로 남아 다시 불통과였습니다. `01867ec`에서 계약의 `stepUp` 재확인(0~900초)을 반영한 뒤 심판 판정은 「방어에 성공했습니다」, 100/100점(조건 7개, 완결성 가점 3개)이었습니다. 제출 전 `npm run fixture:7`, `npm run decider:test`(11개), `npm test`(41개)가 통과했습니다. 실제 자료 차단·재로그인은 여전히 미실행입니다.
 
 `bundle-notes.json`과 `artifacts/submission.json`은 Git에서 무시되는 로컬 파일이며 커밋하지 않습니다. `npm run decider:test`와 `npm run detect:test`는 가상 연습이며 운영 심판 판정이 아닙니다.
