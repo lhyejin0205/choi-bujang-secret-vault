@@ -16,6 +16,11 @@ function appUrl(config) {
 
 const timeout = () => AbortSignal.timeout(10000);
 
+// 12단계: 심판은 이 점검을 격리 환경에서 실행하며, 그곳에서는 공개 HTTPS 주소로 보내는 GET·HEAD만 됩니다.
+// 그래서 쓰기 요청(POST·PUT 등)이 필요한 점검은 보내지 않고 observed 를 not_run 으로 둡니다.
+// 같은 거부 결과는 npm run ops:recheck 와 탈환 작전실의 재확인 표에서 실제로 확인합니다.
+export const WRITE_NOT_RUN = 'not_run';
+
 // 3단계: 로그인 없이, 또는 가짜 토큰으로 자료 API를 불러 실제 응답을 기록합니다.
 // 정상 A 로그인 요청은 계정 비밀번호가 필요하므로 여기서 보내지 않습니다.
 async function checkLoginRequired(app) {
@@ -34,10 +39,6 @@ async function checkLoginRequired(app) {
     ? `${what}에서 자료가 반환됨 (HTTP ${status})`
     : `${what}에서 자료가 반환되지 않음 (HTTP ${status})`;
   const anonymousRead = await probe({ method: 'GET' });
-  const anonymousCreate = await probe({
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ title: 'attack-check', body: 'attack-check' }),
-  });
   // 서명이 없는 가짜 토큰입니다. 세 조각 모양만 갖추고 검사를 통과할 수 없습니다.
   const forgedToken = ['aaaaaaaaaa', 'bbbbbbbbbb', 'cccccccccc'].join('.');
   const forgedRead = await probe({
@@ -47,9 +48,7 @@ async function checkLoginRequired(app) {
     { attackId: 'anonymous_notes_read', expected: '로그인 없이 /api/notes에서 메모를 확인',
       observed: describe(anonymousRead, '로그인 없는 목록 요청') },
     { attackId: 'anonymous_notes_create', expected: '로그인 없이 /api/notes에 메모를 추가',
-      observed: anonymousCreate.leaked || (anonymousCreate.status >= 200 && anonymousCreate.status < 300)
-        ? `로그인 없는 추가 요청이 받아들여짐 (HTTP ${anonymousCreate.status})`
-        : `로그인 없는 추가 요청이 거부됨 (HTTP ${anonymousCreate.status})` },
+      observed: WRITE_NOT_RUN },
     { attackId: 'forged_token_notes_read', expected: '검사를 통과하지 못하는 가짜 토큰으로 메모를 확인',
       observed: describe(forgedRead, '가짜 토큰 목록 요청') },
     { attackId: 'login_a_notes_read', expected: '정상 A 로그인 뒤에는 메모가 보임',
@@ -112,18 +111,12 @@ async function checkNoticeZone(app) {
   } catch {
     leaked = false;
   }
-  const write = await send('/api/notices/n-001', {
-    method: 'PUT', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ title: 'attack-check', body: 'attack-check', role: 'instructor' }),
-  });
   return [
     { attackId: 'anonymous_notices_read', expected: '로그인 없이 /api/notices에서 강사 공지를 확인',
       observed: leaked ? `로그인 없는 공지 목록 요청에서 자료가 반환됨 (HTTP ${read.status})`
         : `로그인 없는 공지 목록 요청에서 자료가 반환되지 않음 (HTTP ${read.status})` },
     { attackId: 'anonymous_notice_update', expected: '로그인 없이 본문에 role을 넣어 강사 공지를 PUT',
-      observed: write.status >= 200 && write.status < 300
-        ? `로그인 없는 공지 수정이 받아들여짐 (HTTP ${write.status})`
-        : `로그인 없는 공지 수정이 거부됨 (HTTP ${write.status})` },
+      observed: WRITE_NOT_RUN },
     { attackId: 'student_updates_notice', expected: '학생 시험 계정으로 강사 공지를 PUT /api/notices/:id',
       observed: '미실행. 학생 계정 토큰이 필요해 이 점검에서는 보내지 않음' },
   ];
@@ -137,17 +130,12 @@ const DETECTION_NOT_SENT = {
   observed: '미실행. 운영 반 엔진의 사건 전달·회수 집행이 연결되지 않아 실제 요청을 보내지 않음',
 };
 
-// 10단계: 복원 경로 POST /api/restore 를 로그인 없이 부르는 요청만 실제로 보내 응답 코드를 기록합니다.
-// B 본인이 메모를 변조·삭제한 뒤 복원하는 시험은 B 계정 토큰이 필요해 보내지 않습니다.
-async function checkRestoreRoute(app) {
-  const response = await fetch(new URL('/api/restore', app), {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}', redirect: 'error', signal: timeout(),
-  });
+// 10단계: 복원 경로 POST /api/restore 는 쓰기 요청이라 이 점검에서는 보내지 않습니다(not_run).
+// B 본인이 메모를 변조·삭제한 뒤 복원하는 시험도 B 계정 토큰이 필요해 보내지 않습니다.
+function checkRestoreRoute() {
   return [
     { attackId: 'anonymous_restore_call', expected: '로그인 없이 POST /api/restore 로 B 메모 복원을 실행',
-      observed: response.status >= 200 && response.status < 300
-        ? `로그인 없는 복원 요청이 받아들여짐 (HTTP ${response.status})`
-        : `로그인 없는 복원 요청이 거부됨 (HTTP ${response.status})` },
+      observed: WRITE_NOT_RUN },
     { attackId: 'b_note_restore_after_tamper', expected: 'B 메모를 변조·삭제한 뒤 B가 POST /api/restore 로 한 건만 복원',
       observed: '미실행. B 계정 토큰이 필요하고 실제 메모를 바꿔야 해 이 점검에서는 보내지 않음' },
   ];
@@ -157,10 +145,6 @@ async function checkRestoreRoute(app) {
 // 로그인한 계정에서 서명 없이·서명 뒤 경로나 본문을 바꿔 보내는 시험은 계정 토큰이 필요해 보내지 않습니다.
 async function checkDeviceApproval(app) {
   const send = (path, init) => fetch(new URL(path, app), { redirect: 'error', signal: timeout(), ...init });
-  const register = await send('/api/devices', {
-    method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ publicKey: { kty: 'EC', crv: 'P-256', x: 'A'.repeat(43), y: 'B'.repeat(43) }, status: 'approved' }),
-  });
   const forged = await send('/api/notes', {
     method: 'GET', headers: { 'x-device-key': '0'.repeat(64), 'x-device-time': String(Date.now()), 'x-device-signature': 'A'.repeat(86) },
   });
@@ -171,11 +155,9 @@ async function checkDeviceApproval(app) {
   } catch {
     leaked = false;
   }
-  const rejected = status => !(status >= 200 && status < 300);
   return [
     { attackId: 'anonymous_device_approval', expected: '로그인 없이 본문에 status:approved를 넣어 기기를 등록',
-      observed: rejected(register.status) ? `로그인 없는 기기 등록이 거부됨 (HTTP ${register.status})`
-        : `로그인 없는 기기 등록이 받아들여짐 (HTTP ${register.status})` },
+      observed: WRITE_NOT_RUN },
     { attackId: 'forged_device_signature_read', expected: '지어낸 기기 서명 머리글만으로 /api/notes에서 메모를 확인',
       observed: leaked ? `지어낸 서명 요청에서 자료가 반환됨 (HTTP ${forged.status})`
         : `지어낸 서명 요청에서 자료가 반환되지 않음 (HTTP ${forged.status})` },
@@ -237,7 +219,7 @@ export async function runAttackChecks(config, env = process.env) {
     if (config.step >= 7) results.push(STEP_UP_NOT_SENT);
     if (config.step >= 8) results.push(...await checkNoticeZone(app));
     if (config.step >= 9) results.push(DETECTION_NOT_SENT);
-    if (config.step >= 10) results.push(...await checkRestoreRoute(app));
+    if (config.step >= 10) results.push(...checkRestoreRoute());
     if (config.step >= 11) results.push(...await checkDeviceApproval(app));
     if (config.step >= 12) results.push(await checkOpsClosed(app));
     return results;
