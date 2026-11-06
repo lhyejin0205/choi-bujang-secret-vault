@@ -42,10 +42,12 @@ function hasCompleteFixtureContext(request) {
 function unusualAccessPattern(request) {
   const { hour, network } = request.signals;
   const unusualHour = hour < 6 || hour >= 22;
-  const firstSeenNetwork = network === 'first_seen';
-  const suddenBulkRead = request.recentEvents.some(event => event.kind === 'bulk_read'
+  // 시작 틀 가상 사건의 'unusual'·'risk_signal'도 같은 뜻으로 받습니다.
+  const unfamiliarNetwork = network === 'first_seen' || network === 'unusual';
+  const suddenBulkRead = request.recentEvents.some(event =>
+    (event.kind === 'bulk_read' || event.kind === 'risk_signal')
     && event.ageSeconds <= 300 && event.count >= 20);
-  return unusualHour && firstSeenNetwork && suddenBulkRead;
+  return unusualHour && unfamiliarNetwork && suddenBulkRead;
 }
 
 function stepUpResponse(request, ruleId) {
