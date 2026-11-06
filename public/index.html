@@ -169,21 +169,18 @@
     window.addEventListener('offline', showOffline);
     showOffline();
 
-    // 접근 토큰은 이 탭에서만 기억합니다(창을 닫으면 사라짐). 저장이 막힌 브라우저에서는 메모리에만 둡니다.
-    const SESSION_KEY = 'byteback.session';
+    // 11단계: 접근 토큰은 이 페이지의 메모리 변수에만 둡니다. 브라우저 저장소에는 쓰지도 읽지도 않으므로
+    // 새로 고치거나 탭을 닫으면 로그인이 풀립니다(기기 서명 키와 같은 방식).
     let memorySession = null;
+    // 이전 버전이 이 탭에 남겼을 수 있는 세션 값은 지우기만 합니다.
+    try { sessionStorage.removeItem('byteback.session'); } catch { /* 지울 값이 없거나 저장소가 막힘 */ }
     function readSession() {
-      let session = memorySession;
-      try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') ?? memorySession; } catch { /* 메모리 값 사용 */ }
+      const session = memorySession;
       if (!session || typeof session.accessToken !== 'string' || !(session.expiresAt > Date.now())) return null;
       return session;
     }
     function writeSession(session) {
       memorySession = session;
-      try {
-        if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-        else sessionStorage.removeItem(SESSION_KEY);
-      } catch { /* 메모리 값만 사용 */ }
     }
 
     const loginReasons = {
