@@ -18,6 +18,12 @@ const PATTERNS = Object.freeze([
     requestIndicators: Object.freeze(['/tools/class-check']),
     confidence: 0.6,
   }),
+  Object.freeze({
+    name: 't1190-tag-without-exploit-payload',
+    condition: 'MITRE ATT&CK T1190으로 분류된 경보인데 완전한 JNDI 원격 조회 구문도 점검 도구 표식도 없으면, 막지 않고 알림으로 추가 확인합니다.',
+    evidence: 'T1190은 공개 애플리케이션 악용 시도를 분류하지만, 요청에 악용 구문이 없으면 실제 악용으로 단정할 수 없어 사람이 확인해야 합니다.',
+    confidence: 0.55,
+  }),
 ]);
 
 function hasT1190(alert) {
@@ -74,9 +80,19 @@ export function decide(alert) {
     };
   }
 
+  // 애매한 시도: T1190으로 분류됐지만 악용 구문·점검 흔적이 없으면 차단하지 않고 알림(0.5 이상 0.85 미만)으로 남깁니다.
+  if (t1190) {
+    const pattern = PATTERNS.find((item) => item.name === 't1190-tag-without-exploit-payload');
+    return {
+      action: actionFor(pattern.confidence),
+      confidence: pattern.confidence,
+      reason: `${pattern.name}: ${pattern.evidence}`,
+    };
+  }
+
   return {
     action: 'record',
     confidence: 0.1,
-    reason: 'no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음',
+    reason: 'no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음',
   };
 }

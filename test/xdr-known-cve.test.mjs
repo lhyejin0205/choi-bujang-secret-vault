@@ -24,10 +24,13 @@ test('known-cve decision module is standalone and distinguishes attack, ambiguou
   assert.doesNotMatch(source, /^\s*import\s/mu);
   assert.doesNotMatch(source, /\b(?:readFileSync|writeFileSync|fetch)\s*\(/u);
   const decisions = fixture.alerts.map((alert) => decide(alert));
+  // 명확한 공격 8건은 block, T1190으로 분류됐지만 악용 구문이 없는 애매한 시도 8건은 alert, 정상 8건은 record 입니다.
   assert.equal(decisions.filter((decision) => decision.action === 'block').length, 8);
-  assert.equal(decisions.filter((decision) => decision.action === 'alert').length, 1);
-  assert.equal(decisions.filter((decision) => decision.action === 'record').length, 15);
-  assert.equal(decisions[0].action, 'block');
+  assert.equal(decisions.filter((decision) => decision.action === 'alert').length, 8);
+  assert.equal(decisions.filter((decision) => decision.action === 'record').length, 8);
+  assert.ok(decisions.slice(0, 8).every((decision) => decision.action === 'block'));
+  assert.ok(decisions.slice(8, 16).every((decision) => decision.action === 'alert'
+    && decision.confidence >= 0.5 && decision.confidence < 0.85));
   assert.equal(decisions[12].action, 'alert');
   assert.ok(decisions.slice(16).every((decision) => decision.action === 'record'));
   const untaggedScanner = {
@@ -80,7 +83,8 @@ test('known-cve responder preserves other rules and blocks only clear attack eve
     assert.equal(result.replay.normalBlocked, 0);
     assert.equal(result.replay.mismatches, 0);
     const notices = readFileSync(logPath, 'utf8').trim().split(/\r?\n/u);
-    assert.equal(notices.length, 9);
+    // 알림 기록: 차단 8건 + 애매한 시도 알림 8건
+    assert.equal(notices.length, 16);
     assert.equal(notices.some((line) => line.includes('${jndi:')), false);
 
     const firstAttacks = fixture.alerts.slice(0, 2);

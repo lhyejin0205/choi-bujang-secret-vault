@@ -52,27 +52,27 @@
     },
     {
       "alertId": "kc-09",
-      "action": "record",
-      "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "t1190-tag-without-exploit-payload: T1190은 공개 애플리케이션 악용 시도를 분류하지만, 요청에 악용 구문이 없으면 실제 악용으로 단정할 수 없어 사람이 확인해야 합니다."
     },
     {
       "alertId": "kc-10",
-      "action": "record",
-      "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "t1190-tag-without-exploit-payload: T1190은 공개 애플리케이션 악용 시도를 분류하지만, 요청에 악용 구문이 없으면 실제 악용으로 단정할 수 없어 사람이 확인해야 합니다."
     },
     {
       "alertId": "kc-11",
-      "action": "record",
-      "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "t1190-tag-without-exploit-payload: T1190은 공개 애플리케이션 악용 시도를 분류하지만, 요청에 악용 구문이 없으면 실제 악용으로 단정할 수 없어 사람이 확인해야 합니다."
     },
     {
       "alertId": "kc-12",
-      "action": "record",
-      "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "t1190-tag-without-exploit-payload: T1190은 공개 애플리케이션 악용 시도를 분류하지만, 요청에 악용 구문이 없으면 실제 악용으로 단정할 수 없어 사람이 확인해야 합니다."
     },
     {
       "alertId": "kc-13",
@@ -82,74 +82,74 @@
     },
     {
       "alertId": "kc-14",
-      "action": "record",
-      "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "t1190-tag-without-exploit-payload: T1190은 공개 애플리케이션 악용 시도를 분류하지만, 요청에 악용 구문이 없으면 실제 악용으로 단정할 수 없어 사람이 확인해야 합니다."
     },
     {
       "alertId": "kc-15",
-      "action": "record",
-      "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "t1190-tag-without-exploit-payload: T1190은 공개 애플리케이션 악용 시도를 분류하지만, 요청에 악용 구문이 없으면 실제 악용으로 단정할 수 없어 사람이 확인해야 합니다."
     },
     {
       "alertId": "kc-16",
-      "action": "record",
-      "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "action": "alert",
+      "confidence": 0.55,
+      "reason": "t1190-tag-without-exploit-payload: T1190은 공개 애플리케이션 악용 시도를 분류하지만, 요청에 악용 구문이 없으면 실제 악용으로 단정할 수 없어 사람이 확인해야 합니다."
     },
     {
       "alertId": "kc-17",
       "action": "record",
       "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "reason": "no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음"
     },
     {
       "alertId": "kc-18",
       "action": "record",
       "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "reason": "no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음"
     },
     {
       "alertId": "kc-19",
       "action": "record",
       "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "reason": "no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음"
     },
     {
       "alertId": "kc-20",
       "action": "record",
       "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "reason": "no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음"
     },
     {
       "alertId": "kc-21",
       "action": "record",
       "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "reason": "no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음"
     },
     {
       "alertId": "kc-22",
       "action": "record",
       "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "reason": "no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음"
     },
     {
       "alertId": "kc-23",
       "action": "record",
       "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "reason": "no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음"
     },
     {
       "alertId": "kc-24",
       "action": "record",
       "confidence": 0.1,
-      "reason": "no-known-cve-pattern: 완전한 JNDI 원격 조회 또는 점검 도구 흔적이 없음"
+      "reason": "no-known-cve-pattern: T1190 분류, 완전한 JNDI 원격 조회, 점검 도구 흔적이 모두 없음"
     }
   ],
   "counts": {
     "block": 8,
-    "alert": 1,
-    "record": 15
+    "alert": 8,
+    "record": 8
   }
 }
