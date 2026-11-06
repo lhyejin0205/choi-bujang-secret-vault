@@ -1,0 +1,167 @@
+{
+  "schema": "aleph.xdr.result.v1",
+  "moduleKey": "privilege",
+  "decisions": [
+    {
+      "alertId": "pv-01",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "account-added-to-admin-group: MITRE ATT&CK T1078(정상 계정 도용)에서 공격자는 탈취한 평범한 계정을 관리자 그룹에 넣어 권한을 얻으며, 관리자 그룹 추가는 권한 상승의 대표 신호입니다."
+    },
+    {
+      "alertId": "pv-02",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "privileged-command-after-escalation: MITRE ATT&CK T1068은 취약점이나 설정 약점을 악용해 권한을 올리는 기법이며, 높은 수준으로 잡힌 권한 변경 직후의 처음 보는 관리자 명령은 악용 뒤 실행 흔적입니다."
+    },
+    {
+      "alertId": "pv-03",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "privileged-command-after-escalation: MITRE ATT&CK T1068은 취약점이나 설정 약점을 악용해 권한을 올리는 기법이며, 높은 수준으로 잡힌 권한 변경 직후의 처음 보는 관리자 명령은 악용 뒤 실행 흔적입니다."
+    },
+    {
+      "alertId": "pv-04",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "account-added-to-admin-group: MITRE ATT&CK T1078(정상 계정 도용)에서 공격자는 탈취한 평범한 계정을 관리자 그룹에 넣어 권한을 얻으며, 관리자 그룹 추가는 권한 상승의 대표 신호입니다."
+    },
+    {
+      "alertId": "pv-05",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "repeated-admin-group-addition: MITRE ATT&CK T1078은 정상 계정을 도용해 권한을 얻는 기법이며, 한 주소가 여러 계정을 관리자 그룹에 넣거나 빠진 계정을 곧바로 다시 넣는 것은 권한 확보를 반복한 흔적입니다."
+    },
+    {
+      "alertId": "pv-06",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "privileged-command-after-escalation: MITRE ATT&CK T1068은 취약점이나 설정 약점을 악용해 권한을 올리는 기법이며, 높은 수준으로 잡힌 권한 변경 직후의 처음 보는 관리자 명령은 악용 뒤 실행 흔적입니다."
+    },
+    {
+      "alertId": "pv-07",
+      "action": "block",
+      "confidence": 0.92,
+      "reason": "account-added-to-admin-group: MITRE ATT&CK T1078(정상 계정 도용)에서 공격자는 탈취한 평범한 계정을 관리자 그룹에 넣어 권한을 얻으며, 관리자 그룹 추가는 권한 상승의 대표 신호입니다."
+    },
+    {
+      "alertId": "pv-08",
+      "action": "block",
+      "confidence": 0.9,
+      "reason": "privileged-command-after-escalation: MITRE ATT&CK T1068은 취약점이나 설정 약점을 악용해 권한을 올리는 기법이며, 높은 수준으로 잡힌 권한 변경 직후의 처음 보는 관리자 명령은 악용 뒤 실행 흔적입니다."
+    },
+    {
+      "alertId": "pv-09",
+      "action": "block",
+      "confidence": 0.95,
+      "reason": "repeated-admin-group-addition: MITRE ATT&CK T1078은 정상 계정을 도용해 권한을 얻는 기법이며, 한 주소가 여러 계정을 관리자 그룹에 넣거나 빠진 계정을 곧바로 다시 넣는 것은 권한 확보를 반복한 흔적입니다."
+    },
+    {
+      "alertId": "pv-10",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "privilege-change-needs-review: T1068·T1078은 권한 상승 기법이지만 취소된 권한 상승 창, 관리자 그룹이 아닌 과제 그룹 추가, 평소 주소의 관리자 명령 1건처럼 정상 수업 활동도 같은 분류로 잡히므로 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "pv-11",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "privilege-change-needs-review: T1068·T1078은 권한 상승 기법이지만 취소된 권한 상승 창, 관리자 그룹이 아닌 과제 그룹 추가, 평소 주소의 관리자 명령 1건처럼 정상 수업 활동도 같은 분류로 잡히므로 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "pv-12",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "privilege-change-needs-review: T1068·T1078은 권한 상승 기법이지만 취소된 권한 상승 창, 관리자 그룹이 아닌 과제 그룹 추가, 평소 주소의 관리자 명령 1건처럼 정상 수업 활동도 같은 분류로 잡히므로 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "pv-13",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "privilege-change-needs-review: T1068·T1078은 권한 상승 기법이지만 취소된 권한 상승 창, 관리자 그룹이 아닌 과제 그룹 추가, 평소 주소의 관리자 명령 1건처럼 정상 수업 활동도 같은 분류로 잡히므로 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "pv-14",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "privilege-change-needs-review: T1068·T1078은 권한 상승 기법이지만 취소된 권한 상승 창, 관리자 그룹이 아닌 과제 그룹 추가, 평소 주소의 관리자 명령 1건처럼 정상 수업 활동도 같은 분류로 잡히므로 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "pv-15",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "privilege-change-needs-review: T1068·T1078은 권한 상승 기법이지만 취소된 권한 상승 창, 관리자 그룹이 아닌 과제 그룹 추가, 평소 주소의 관리자 명령 1건처럼 정상 수업 활동도 같은 분류로 잡히므로 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "pv-16",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "privilege-change-needs-review: T1068·T1078은 권한 상승 기법이지만 취소된 권한 상승 창, 관리자 그룹이 아닌 과제 그룹 추가, 평소 주소의 관리자 명령 1건처럼 정상 수업 활동도 같은 분류로 잡히므로 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "pv-17",
+      "action": "alert",
+      "confidence": 0.6,
+      "reason": "privilege-change-needs-review: T1068·T1078은 권한 상승 기법이지만 취소된 권한 상승 창, 관리자 그룹이 아닌 과제 그룹 추가, 평소 주소의 관리자 명령 1건처럼 정상 수업 활동도 같은 분류로 잡히므로 사람이 확인해야 합니다."
+    },
+    {
+      "alertId": "pv-18",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "pv-19",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "pv-20",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "pv-21",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "pv-22",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "pv-23",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "pv-24",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "pv-25",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    },
+    {
+      "alertId": "pv-26",
+      "action": "record",
+      "confidence": 0.1,
+      "reason": "no-privilege-pattern: T1068·T1078 권한 상승 신호가 없거나 규칙 수준이 낮은 정상 이벤트"
+    }
+  ],
+  "counts": {
+    "block": 9,
+    "alert": 8,
+    "record": 9
+  }
+}
