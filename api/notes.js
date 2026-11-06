@@ -3,6 +3,7 @@ import { handleNotesRequest } from '../src/notes-handler.mjs';
 import { handleNoticesRequest } from '../src/notices-handler.mjs';
 import { handleRestoreRequest } from '../src/restore-handler.mjs';
 import { handleDeviceRequest, verifyDeviceRequest } from '../src/device-handler.mjs';
+import { handleOpsRequest } from '../src/ops-handler.mjs';
 import { handleLogin, handleLogout } from '../src/session-handler.mjs';
 
 // 로그인 검사는 틀이 준 src/verify-login.mjs를 그대로 씁니다.
@@ -28,6 +29,7 @@ const logDenial = (entry) => console.warn(JSON.stringify(entry));
 // 11단계: 보호 요청(메모·공지)의 서명 검증에 쓸 "실제 경로"를 서버가 라우팅으로 다시 만듭니다.
 // 요청이 주장하는 경로가 아니라 이 값으로 검증하므로, 서명한 뒤 경로를 바꾸면 거부됩니다.
 function protectedPath(query = {}) {
+  if (query.zone === 'ops') return '/api/ops';
   const base = query.zone === 'notices' ? '/api/notices' : '/api/notes';
   return Object.hasOwn(query, 'id') ? `${base}/${typeof query.id === 'string' ? query.id : ''}` : base;
 }
@@ -47,6 +49,10 @@ export default function handler(request, response) {
   // 11단계: /api/devices → /api/notes?zone=devices 로 넘어온 기기 승인 대기 등록·상태 확인
   if (request.query?.zone === 'devices') {
     return handleDeviceRequest(request, response, { verifyLogin, log: logDenial });
+  }
+  // 12단계: /api/ops → /api/notes?zone=ops 로 넘어온 탈환 작전실 요약(로그인 + 승인 기기 서명 필요)
+  if (request.query?.zone === 'ops') {
+    return handleOpsRequest(request, response, { verifyLogin, requireDevice: deviceCheck(request), log: logDenial });
   }
   if (request.query?.zone === 'notices') {
     return handleNoticesRequest(request, response, { verifyLogin, requireDevice: deviceCheck(request), log: logDenial });

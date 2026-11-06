@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-public.mjs",
-    "test": "node --test test/r5.test.mjs test/package-starter.test.mjs test/notes-handler.test.mjs test/resources.test.mjs test/detect.test.mjs test/policy-backup.test.mjs test/restore-handler.test.mjs test/device-handler.test.mjs test/session-handler.test.mjs test/xdr-respond.test.mjs test/xdr-known-cve.test.mjs",
+    "test": "node --test test/r5.test.mjs test/package-starter.test.mjs test/notes-handler.test.mjs test/resources.test.mjs test/detect.test.mjs test/policy-backup.test.mjs test/restore-handler.test.mjs test/device-handler.test.mjs test/ops-handler.test.mjs test/recheck.test.mjs test/session-handler.test.mjs test/xdr-respond.test.mjs test/xdr-known-cve.test.mjs",
     "test:r5": "node --test test/r5.test.mjs",
     "test:package": "node --test test/package-starter.test.mjs",
     "bundle": "node scripts/bundle.mjs",
@@ -15,6 +15,7 @@
     "policy:trial": "node scripts/policy.mjs trial",
     "policy:diff": "node scripts/policy.mjs diff",
     "policy:restore": "node scripts/policy.mjs restore",
+    "ops:recheck": "node scripts/recheck.mjs",
     "xdr:run": "node scripts/xdr-run.mjs"
   },
   "engines": {

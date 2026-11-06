@@ -184,6 +184,21 @@ async function checkDeviceApproval(app) {
   ];
 }
 
+// 12단계: 탈환 작전실 요약 GET /api/ops 를 로그인 없이 부르는 요청을 실제로 보내 응답 코드만 기록합니다.
+async function checkOpsClosed(app) {
+  const response = await fetch(new URL('/api/ops', app), { redirect: 'error', signal: timeout() });
+  let leaked = false;
+  try {
+    const data = await response.json();
+    leaked = response.ok && data !== null && typeof data === 'object' && 'revocation' in data;
+  } catch {
+    leaked = false;
+  }
+  return { attackId: 'anonymous_ops_summary', expected: '로그인 없이 /api/ops에서 작전실 요약(기기·복원 기록)을 확인',
+    observed: leaked ? `로그인 없는 작전실 요청에서 요약이 반환됨 (HTTP ${response.status})`
+      : `로그인 없는 작전실 요청에서 요약이 반환되지 않음 (HTTP ${response.status})` };
+}
+
 async function checkOriginalApiClosed(config, env) {
   const url = originalUrl(config);
   const key = publishableKey(env);
@@ -213,7 +228,7 @@ async function checkOriginalApiClosed(config, env) {
 }
 
 export async function runAttackChecks(config, env = process.env) {
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
   if (config.step >= 5) {
@@ -224,6 +239,7 @@ export async function runAttackChecks(config, env = process.env) {
     if (config.step >= 9) results.push(DETECTION_NOT_SENT);
     if (config.step >= 10) results.push(...await checkRestoreRoute(app));
     if (config.step >= 11) results.push(...await checkDeviceApproval(app));
+    if (config.step >= 12) results.push(await checkOpsClosed(app));
     return results;
   }
   if (config.step === 4) {

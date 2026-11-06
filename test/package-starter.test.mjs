@@ -66,7 +66,8 @@ test('5단계 설정은 로그인 발급자, 실제 자료 API 경로, 원본 �
     { source: '/api/notices/:id', destination: '/api/notes?zone=notices&id=:id' },
     { source: '/api/notices', destination: '/api/notes?zone=notices' },
     { source: '/api/restore', destination: '/api/notes?zone=restore' },
-    { source: '/api/devices', destination: '/api/notes?zone=devices' }]);
+    { source: '/api/devices', destination: '/api/notes?zone=devices' },
+    { source: '/api/ops', destination: '/api/notes?zone=ops' }]);
   assert.match(readme, /\/api\/notes/u);
   assert.match(readme, /SUPABASE_SECRET_KEY/u);
   assert.match(readme, /verify-login/u);

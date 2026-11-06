@@ -35,6 +35,13 @@
     [hidden] { display: none !important; }
     .status { display: grid; gap: 6px; font-size: 15px; color: #bfd0e5; }
     .status b { color: #ecf4ff; }
+    .ops-legend { font-size: 13px; color: #9fb3c8; margin: 8px 0; }
+    #ops h3 { font-size: 16px; margin: 18px 0 6px; }
+    #ops table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    #ops th, #ops td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #2c3e52; word-break: break-all; }
+    .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; margin-left: 6px; color: #06242a; background: #8ad8df; }
+    .tag.code { background: #c7b6f0; }
+    .tag.not_run { background: #d0b073; }
     .offline { margin: 0 0 16px; padding: 14px 18px; border: 1px solid #d0b073; border-radius: 14px; color: #fff3d6; background: #5a4a2a44; }
   </style>
 </head>
@@ -90,10 +97,31 @@
       </form>
       <p id="notes-error" class="error" role="alert"></p>
       <ul id="notes" aria-live="polite"></ul>
+
+      <!-- 12단계: 탈환 작전실. 서버 GET /api/ops 응답만 그대로 보여 주며, 화면 문구를 통과 근거로 쓰지 않습니다. -->
+      <section id="ops" class="panel" aria-label="탈환 작전실">
+        <div class="row">
+          <strong style="display:inline">탈환 작전실</strong>
+          <button id="ops-load" class="secondary" type="button">작전실 불러오기</button>
+        </div>
+        <p class="ops-legend">출처 표시 — <b>실측</b>: 이번 요청에서 서버가 DB를 읽은 결과 · <b>코드 기준</b>: 검사한 커밋에 정해진 값 · <b>미실행</b>: 아직 실행·연결되지 않아 결과 없음</p>
+        <p id="ops-meta" class="ops-legend"></p>
+        <div id="ops-body"></div>
+        <p id="ops-error" class="error" role="alert"></p>
+        <div class="row" style="margin-top:14px">
+          <strong style="display:inline">1~11단계 재확인 표</strong>
+          <button id="recheck-run" class="secondary" type="button">재확인 표 만들기</button>
+        </div>
+        <p class="ops-legend">정상·금지 요청을 이 기기에서 실제로 보내 응답 코드를 적습니다. 보내지 않은 줄은 미실행입니다. 심판의 41종 시험 결과가 아닙니다.</p>
+        <p id="recheck-summary" class="ops-legend"></p>
+        <div id="recheck-body"></div>
+        <details id="recheck-json-box" hidden><summary class="ops-legend">표 JSON 보기(저장용)</summary><pre id="recheck-json" style="white-space:pre-wrap;font-size:12px"></pre></details>
+      </section>
     </section>
   </main>
   <script type="module">
     // 이 화면은 Supabase 주소나 키를 갖고 있지 않습니다. 로그인·로그아웃·자료는 모두 서버 함수로 갑니다.
+    import { RECHECK_CASES, judgeResult, notRunRow } from '/recheck-cases.js';
     const $ = (selector) => document.querySelector(selector);
     const loginError = $('#login-error');
     const notesError = $('#notes-error');
@@ -295,6 +323,135 @@
       }
     }
 
+    // 12단계: 탈환 작전실. 서버 응답의 값을 textContent로만 그립니다. 수치는 같은 응답의 records에서 셉니다.
+    const sourceLabel = { api: '실측', code: '코드 기준', not_run: '미실행' };
+    const el = (tag, text, className) => {
+      const node = document.createElement(tag);
+      if (text !== undefined) node.textContent = String(text);
+      if (className) node.className = className;
+      return node;
+    };
+    function heading(title, source) {
+      const h = el('h3', title);
+      h.append(el('span', sourceLabel[source] ?? '미실행', `tag ${source}`));
+      return h;
+    }
+    function table(columns, rows) {
+      const t = el('table');
+      const head = el('tr');
+      columns.forEach(([, label]) => head.append(el('th', label)));
+      t.append(head);
+      rows.forEach((row) => {
+        const tr = el('tr');
+        columns.forEach(([key]) => tr.append(el('td', row[key] ?? '-')));
+        t.append(tr);
+      });
+      return t;
+    }
+    const tally = (rows, key) => rows.reduce((acc, row) => ({ ...acc, [row[key]]: (acc[row[key]] ?? 0) + 1 }), {});
+    const tallyText = (counts) => Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(' · ') || '0건';
+
+    function renderOps(ops) {
+      const body = $('#ops-body');
+      body.replaceChildren();
+      $('#ops-meta').textContent = `요청 ID ${ops.requestId} · 확인 시각 ${ops.checkedAt}`;
+
+      body.append(heading('판정기 규칙', ops.decider.source));
+      body.append(el('p', `규칙 ${ops.decider.ruleIds.length}개: ${ops.decider.ruleIds.join(', ')}`));
+      body.append(el('p', `허용 경로: ${ops.decider.allowedRoutes.join(', ')}`));
+      body.append(el('p', ops.decider.note, 'ops-legend'));
+
+      body.append(heading('탐지 사건', ops.detection.source));
+      body.append(el('p', `규칙 ${ops.detection.rule.reasonCode}: 같은 사용자의 조회가 ${ops.detection.rule.windowMinutes}분 안에 ${ops.detection.rule.limit}건을 넘으면 회수 제안`));
+      body.append(el('p', ops.detection.events ? `사건 ${ops.detection.events.length}건` : '사건: 없음(미실행)'));
+      body.append(el('p', ops.detection.note, 'ops-legend'));
+
+      const rev = ops.revocation;
+      body.append(heading('기기 승인·회수 상태', rev.source));
+      if (rev.records) {
+        body.append(el('p', `최근 ${rev.records.length}건 — ${tallyText(tally(rev.records, 'status'))}`));
+        body.append(table([['device', '기기 지문(앞 12)'], ['mine', '내 기기'], ['status', '상태'], ['requestedAt', '요청 시각'], ['decidedAt', '결정 시각']],
+          rev.records.map((row) => ({ ...row, mine: row.mine ? '예' : '아니오' }))));
+      }
+      body.append(el('p', rev.note, 'ops-legend'));
+
+      const rec = ops.recovery;
+      body.append(heading('복구 버전 — 안전 정책 사본', rec.policy.source));
+      body.append(el('p', `${rec.policy.version} · 원본 커밋 ${rec.policy.sourceCommit} · SHA-256 ${rec.policy.sha256.slice(0, 12)}…`));
+      body.append(heading('복구 버전 — B 메모 복원 사본', rec.noteBackup.source));
+      body.append(el('p', rec.noteBackup.source === 'api'
+        ? `메모 ${rec.noteBackup.noteId} · 내용 해시 ${rec.noteBackup.contentSha256Prefix}… · 저장 ${rec.noteBackup.capturedAt} (본문은 표시하지 않음)`
+        : rec.noteBackup.note));
+      body.append(heading('복원 감사 기록', rec.audit.source));
+      if (rec.audit.records) {
+        body.append(el('p', `최근 ${rec.audit.records.length}건 — ${tallyText(tally(rec.audit.records, 'result'))}`));
+        body.append(table([['seq', '번호'], ['at', '시각'], ['actor', '호출자'], ['beforeState', '복원 전'], ['result', '결과']], rec.audit.records));
+      } else {
+        body.append(el('p', rec.audit.note));
+      }
+    }
+
+    // 12단계: 1~11단계 재확인 표. 목록(/recheck-cases.js)의 요청을 실제로 보내고 응답 코드만 적습니다.
+    // 화면을 바꾸는 api() 대신 fetch를 직접 써서, 금지 요청의 403이 자료실을 닫지 않게 합니다.
+    async function runRecheck() {
+      const session = readSession();
+      $('#recheck-summary').textContent = '실행 중…';
+      $('#recheck-body').replaceChildren();
+      const rows = [];
+      let ownIds = null;
+      for (const testCase of RECHECK_CASES) {
+        if (testCase.engine) { rows.push(notRunRow(testCase, testCase.engine)); continue; }
+        if (testCase.auth === 'session' && (!session || deviceStatus !== 'approved')) {
+          rows.push(notRunRow(testCase, '로그인과 승인된 기기가 필요')); continue;
+        }
+        if (testCase.skipIfOwn && ownIds?.includes(testCase.skipIfOwn)) {
+          rows.push(notRunRow(testCase, '이 계정 자신의 메모라 다른 계정 요청이 아님')); continue;
+        }
+        const clientRequestId = crypto.randomUUID();
+        const headers = { 'x-request-id': clientRequestId };
+        if (testCase.body !== undefined) headers['content-type'] = 'application/json';
+        if (testCase.auth === 'session') headers.authorization = `Bearer ${session.accessToken}`;
+        if (testCase.auth === 'forged') headers.authorization = 'Bearer aaaaaaaaaa.bbbbbbbbbb.cccccccccc';
+        if (testCase.sign === 'signed') Object.assign(headers, await signedHeaders(testCase.method, testCase.path, testCase.body));
+        if (testCase.sign === 'wrong-path') Object.assign(headers, await signedHeaders(testCase.method, testCase.signPath, testCase.body));
+        if (testCase.sign === 'forged') {
+          Object.assign(headers, { 'x-device-key': '0'.repeat(64), 'x-device-time': String(Date.now()), 'x-device-signature': 'A'.repeat(86) });
+        }
+        const checkedAt = new Date().toISOString();
+        let status = null;
+        let serverRequestId = null;
+        try {
+          const response = await fetch(testCase.path, { method: testCase.method, headers, cache: 'no-store', redirect: 'manual',
+            body: testCase.body === undefined ? undefined : JSON.stringify(testCase.body) });
+          status = response.status;
+          serverRequestId = response.headers.get('x-vercel-id');
+          if (testCase.id === 's3-own-list' && response.ok) {
+            const notes = await response.json().catch(() => null);
+            ownIds = Array.isArray(notes) ? notes.map((note) => note.id) : null;
+          }
+        } catch { status = null; }
+        rows.push({ id: testCase.id, stage: testCase.stage, kind: testCase.kind, request: `${testCase.method} ${testCase.path}`,
+          name: testCase.name, expected: testCase.expect.join('/'), actual: status === null ? '요청 실패' : String(status),
+          verdict: status === null ? '불일치' : judgeResult(testCase, status), clientRequestId, serverRequestId, checkedAt, note: '화면에서 실제 요청' });
+      }
+      const count = (verdict) => rows.filter((row) => row.verdict === verdict).length;
+      $('#recheck-summary').textContent = `일치 ${count('일치')} · 불일치 ${count('불일치')} · 미실행 ${count('미실행')} (${rows.length}줄)`;
+      $('#recheck-body').replaceChildren(table([['stage', '단계'], ['kind', '구분'], ['name', '요청'], ['request', '경로'],
+        ['expected', '기대'], ['actual', '실제'], ['verdict', '판정'], ['serverRequestId', '요청 ID(Vercel)'], ['checkedAt', '확인 시각']], rows));
+      $('#recheck-json').textContent = JSON.stringify({ schema: 'aleph.recheck.v1', app: location.origin, generatedAt: new Date().toISOString(), rows }, null, 2);
+      $('#recheck-json-box').hidden = false;
+    }
+
+    async function loadOps() {
+      $('#ops-error').textContent = '';
+      try {
+        renderOps(await api('/api/ops'));
+      } catch (error) {
+        $('#ops-body').replaceChildren();
+        $('#ops-error').textContent = error.message;
+      }
+    }
+
     // 로그인 + 서버가 승인한 기기일 때만 자료실 칸을 엽니다. 그 전에는 자료를 그리지 않습니다.
     function render(session) {
       const signedIn = Boolean(session);
@@ -303,7 +460,12 @@
       $('#device-gate').hidden = !signedIn || approved;
       $('#signed-in').hidden = !approved;
       $('#who').textContent = approved ? (session?.email ?? '') : '';
-      if (!approved) { list.replaceChildren(); notesError.textContent = ''; }
+      if (!approved) {
+        list.replaceChildren(); notesError.textContent = '';
+        $('#ops-body').replaceChildren(); $('#ops-meta').textContent = ''; $('#ops-error').textContent = '';
+        $('#recheck-body').replaceChildren(); $('#recheck-summary').textContent = '';
+        $('#recheck-json').textContent = ''; $('#recheck-json-box').hidden = true;
+      }
     }
 
     async function enterVault() {
@@ -355,6 +517,8 @@
     });
 
     $('#device-recheck').addEventListener('click', enterVault);
+    $('#ops-load').addEventListener('click', loadOps);
+    $('#recheck-run').addEventListener('click', runRecheck);
     $('#device-logout').addEventListener('click', () => $('#logout').click());
 
     $('#logout').addEventListener('click', async () => {

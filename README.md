@@ -1,4 +1,4 @@
-# BYTE BACK 방어전 · 11단계 저장점
+# BYTE BACK 방어전 · 12단계 저장점
 
 모든 메모는 실습용 가상 자료입니다. 실제 개인정보, 비밀번호, 토큰, 서버 전용 키를 코드·Git·채팅에 넣지 마세요. 코딩 도구에는 [AGENTS.md](AGENTS.md)를 먼저 읽히세요.
 
@@ -16,7 +16,8 @@
 | 8 | 자원을 구역으로 나눔: 메모 `note:<id>`·강사 공지 `notice:<id>` 자원 ID, 판정기의 구역별 정확한 경로 규칙(`resource_zone`), 공지 쓰기의 저장된 강사 권한 대조와 짧은 거부 사유 기록. `allowedRoutes`는 판정기 허용 경로 세 개 (`005f714`) |
 | 9 | 탐지기 `src/detect.mjs`: 사건의 `at`·`method`·`identity.sub`만 읽고, 같은 가명 사용자의 GET이 10분 안에 120건을 넘으면 `burst_read`로 회수를 제안(`propose_revocation`)합니다. 운영 반 엔진의 사건 전달·회수 집행은 미연결 (`57b2c50`) |
 | 10 | 백업에서 되살리기: 안전 정책(판정기 규칙·`allowedRoutes`·DB 접근 정책) 사본과 SHA-256 해시, 시험 정책과의 차이 보기·확인 후 복원·감사 기록(`npm run policy:*`), 시험 계정 B 메모 한 건의 비공개 사본(`stage10-restore-backup.sql`)과 ID·소유자·내용 해시를 대조해 그 한 건만 되돌리는 `POST /api/restore`, 복구 뒤 재확인 순서 (`9075192`) |
-| 11 | 나만의 접속 앱: 설치형 웹앱 설정(`manifest.webmanifest`·아이콘)·오프라인 안내·기기 승인 상태 표시, 메모리에만 있는 기기 서명 키로 `POST /api/devices` 승인 대기 등록, DB(`stage11-devices.sql`)에서 사람이 승인한 기기의 요청 서명(동작·경로·본문 해시·시각)이 있어야 메모·공지 API가 응답 (11단계 저장점) |
+| 11 | 나만의 접속 앱: 설치형 웹앱 설정(`manifest.webmanifest`·아이콘)·오프라인 안내·기기 승인 상태 표시, 메모리에만 있는 기기 서명 키로 `POST /api/devices` 승인 대기 등록, DB(`stage11-devices.sql`)에서 사람이 승인한 기기의 요청 서명(동작·경로·본문 해시·시각)이 있어야 메모·공지 API가 응답 (`4352d66`, 재제출에서 로그인 세션도 메모리에만 두도록 고침 `1ae7fd6`) |
+| 12 | 탈환 작전실: 승인된 기기에서 `GET /api/ops`로 판정기 규칙(코드 기준)·탐지 사건(미실행)·기기 승인·회수 상태와 복구 버전·복원 감사 기록(실측)을 출처와 함께 표시, 1~11단계 정상·금지 요청 재확인 표(`npm run ops:recheck`·작전실 「재확인 표 만들기」), 출처와 설치·실행·중지·복구 안내 (12단계 저장점) |
 
 ## 현재 동작
 
@@ -63,6 +64,51 @@
    - **탐지 연습(9단계):** `npm run detect:test`에서 10분 안 121건·200건 폭주는 `propose_revocation`, 정상 30건·120건·두 사용자 각 100건·흩어진 200건은 `observe`여야 합니다.
    - **강사 권한(선택):** 강사 계정이 있으면 Vercel 환경변수 `INSTRUCTOR_USER_IDS`에 그 사용자 UUID를 넣고 Redeploy 합니다. 넣지 않으면 모든 공지 쓰기가 403입니다.
 8. **제출 묶음:** 원본 API 자기 점검에는 공개용 키가 필요합니다. 화면 코드에 키가 없으므로 `SUPABASE_PUBLISHABLE_KEY=sb_publishable_… npm run bundle`처럼 실행할 때만 넘깁니다. 키 없이 실행하면 그 점검은 미실행으로 남습니다. 가짜 검사기와 가짜 저장소로 도는 시험이며 실제 로그인이나 배포를 확인하지 않습니다.
+
+## 출처와 설치·실행·중지·복구 안내 (12단계)
+
+기준은 이 안내를 담은 **12단계 저장점 커밋**입니다(`npm run bundle`이 만든 `artifacts/submission.json`의 `commit` 값, 배포의 `/aleph.json` `commit` 값과 같아야 함). 아래 명령과 화면 이름은 그 커밋의 파일을 대조해 적었습니다. 비밀값(서버 전용 키, 비밀번호, 토큰, 기기 개인키)은 저장소·안내·제출 묶음 어디에도 넣지 않으며, 필요한 곳에는 **이름만** 적습니다.
+
+### 누가 만든 것인가
+
+| 출처 | 무엇 | 이 저장소에서의 위치 |
+|---|---|---|
+| **ALEPH SDP 엔진 사용** (운영 측 제공, 학생이 만들지 않음) | 로그인한 신원·확인된 기기·경로를 검증하고 판정 요청(`aleph.decision.v1`)을 학생 판정기에 전달, 미등록 기기 선차단, 탐지 사건 전달과 회수 집행, 심판 접수(`judgeIssuer`) | 저장소에 엔진 코드는 없습니다. 계약 문서 `docs/DECIDER_REQUEST.md`·`docs/DETECT_EVENTS.md`와 `aleph.config.json`의 `judgeIssuer`만 있습니다. 탐지 사건 전달·회수 집행은 이 자료실과 **연결·시험하지 않았습니다.** |
+| **시작 틀 제공** (`ChoiTimo/aleph-defense-starter`, 첫 커밋 `c0c3653`) | 로그인 토큰 검사 `src/verify-login.mjs`(고치지 않음), 제출 묶음 `scripts/bundle.mjs`, 빌드 `scripts/build-public.mjs`·`deployment-identity.mjs`, 연습 틀 `scripts/decider-test.mjs`·`fixture-7.mjs`·`detect-test.mjs`(학생이 사례를 더함), `package/` 양식, 미구현 뼈대 `api/ai.js`·`api/threat-intel.js`(501), XDR 틀 `scripts/xdr-run.mjs`·`xdr/README.md` | 위 파일들. 판정기 `src/decider.mjs`·탐지기 `src/detect.mjs`·자기 점검 `src/attack-check.mjs`·화면 `public/index.html`은 시작 틀의 빈 틀을 학생이 채운 것입니다. |
+| **학생 작업** | 자료 API·로그인 서버 함수 `api/notes.js`, `src/notes-handler.mjs`·`session-handler.mjs`·`notices-handler.mjs`·`resources.mjs`·`restore-handler.mjs`·`device-handler.mjs`·`ops-handler.mjs`·`policy-backup.mjs`, 판정기 규칙(`src/decider.mjs`), 탐지 규칙(`src/detect.mjs`), 접속 앱 화면(`public/index.html`·`manifest.webmanifest`·`icon.svg`·`recheck-cases.js`), DB SQL `supabase/*.sql`, 정책 사본 `policy-backup/`, 도구 `scripts/policy.mjs`·`recheck.mjs`, 시험 `test/*`, XDR 보너스 `xdr/*/` | 2단계부터 12단계까지의 커밋 |
+| **외부 서비스** | Supabase(로그인·DB), Vercel(배포·서버 함수) | 계정과 설정은 학생이 직접 만들고, 값은 각 서비스의 비밀 입력란에만 넣습니다. |
+
+### 1. 자료실 (서버 함수 + DB)
+
+- **설치:** ① Supabase 프로젝트와 `notes` 테이블(2단계), A·B 시험 계정을 만듭니다. ② SQL Editor에서 `supabase/stage3-grants.sql` → `stage4-rls.sql` → `stage5-revoke.sql` → `stage10-restore-backup.sql` → `stage11-devices.sql`을 각 파일의 ①②③ 순서로 실행합니다. ③ Vercel 프로젝트에 이 저장소를 연결하고 환경변수 **이름** `SUPABASE_URL`, `SUPABASE_SECRET_KEY`(서버 전용), 선택 `INSTRUCTOR_USER_IDS`를 비밀 입력란에 넣은 뒤 배포합니다. ④ 로컬에서는 `npm install` 뒤 `npm test`가 통과해야 합니다.
+- **실행:** 배포 주소(`aleph.config.json`의 `publicAppUrl`)를 엽니다. 로그인 → 화면의 기기 지문 확인 → SQL Editor에서 `stage11-devices.sql` ③으로 그 지문을 승인 → 「승인 다시 확인」 순서입니다.
+- **중지:** 자료 제공을 바로 멈추려면 Vercel 환경변수에서 `SUPABASE_SECRET_KEY`를 지우고 다시 배포합니다. 자료 API는 503(`NOTES_NOT_CONFIGURED`)을 돌려주고 자료를 내주지 않습니다. 특정 기기만 막으려면 `stage11-devices.sql` ③의 `revoked` 문을 실행합니다.
+- **복구:** 배포가 깨졌으면 Vercel의 이전 정상 배포로 되돌리거나, Git에서 문제 커밋을 `git revert`로 되돌린 뒤 다시 배포합니다(`reset --hard`는 쓰지 않음). 시험 계정 B의 메모 한 건은 `POST /api/restore`로 사본에서 되살립니다(위 「복구 뒤 다시 확인하는 순서」).
+
+### 2. 학생 판정기 (`src/decider.mjs`)
+
+- **설치:** 따로 설치하지 않습니다. 운영 측 ALEPH SDP 엔진이 이 저장소의 `decide(request)`를 불러 씁니다.
+- **실행(연습):** `npm run decider:test`, `npm run fixture:7`. 둘 다 가상 요청이며 엔진의 실제 판정 기록이 아닙니다.
+- **중지:** 학생 저장소에는 판정기를 끄는 스위치가 없습니다. 엔진 쪽 연결은 운영 측 몫입니다.
+- **복구:** 판정기 규칙은 안전 정책 사본에 들어 있습니다. `npm run policy:diff`로 사본 해시를 검증한 뒤 Git 기록과 대조해 되돌립니다.
+
+### 3. 탐지 규칙 (`src/detect.mjs`)
+
+- **실행(연습):** `npm run detect:test`. 가상 사건만 넣습니다.
+- **운영 연결:** 엔진의 사건 전달과 회수 집행은 연결되지 않았습니다. 탈환 작전실도 탐지 사건을 「미실행」으로 표시합니다.
+- **중지·복구:** Git으로 이전 커밋의 파일을 되돌리고 `npm run detect:test`로 다시 확인합니다.
+
+### 4. 접속 앱 (설치형 웹앱 + 기기 승인)
+
+- **설치:** 배포 주소를 Chrome 등으로 열어 「앱 설치」를 고릅니다. 설치는 기기 승인이 아닙니다.
+- **실행:** 앱 창에서 로그인하고 기기 승인을 받습니다. 토큰과 서명 키는 메모리에만 있어 새로 고치면 다시 로그인·승인합니다.
+- **중지:** 로그아웃하거나 앱 창을 닫습니다. 기기를 더 믿지 않으려면 `revoked`로 바꿉니다.
+- **복구:** 새로 로그인해 새 지문을 승인받습니다.
+
+### 5. 탈환 작전실과 재확인 표
+
+- **작전실:** 승인된 기기의 자료실 아래 「작전실 불러오기」를 누릅니다. `GET /api/ops` 응답을 그대로 보여 주며, 항목마다 실측·코드 기준·미실행이 표시됩니다.
+- **재확인 표:** 계정 없이 보낼 수 있는 줄은 `npm run ops:recheck`로 보냅니다(결과는 `artifacts/recheck.json`, Git 제외). 로그인·승인 기기가 필요한 줄은 작전실의 「재확인 표 만들기」로 보냅니다. 엔진·계정 비밀값이 필요한 줄은 미실행으로 남습니다. 어느 쪽도 심판의 41종 판정이 아닙니다.
 
 ## 확인 방법
 
@@ -113,7 +159,11 @@
 
 배포된 앱에 보내는 요청(4~10번, 12번의 API 부분)과 B·A 계정 토큰이 필요한 요청은 아직 보내지 않았습니다. 실제 메모를 변조·삭제한 뒤 복원하는 시험도 하지 않았습니다. 실행하면 위 표의 "상태"를 날짜와 실제 결과로 바꿉니다.
 
-## 알려진 약점 (11단계 기준)
+## 알려진 약점 (12단계 기준)
+
+- 탈환 작전실의 탐지 사건은 운영 엔진과 연결되지 않아 항상 「미실행」입니다. 판정기 규칙도 코드 기준이며, 엔진이 실제로 내린 판정 기록은 이 서버에 없습니다.
+- 작전실의 기기·복원 기록은 최근 50건만 셉니다. 그보다 오래된 기록은 SQL Editor에서 직접 확인해야 합니다.
+- 재확인 표에서 B 계정 토큰이 필요한 공격, 공개용 키가 필요한 원본 API 점검, 엔진이 필요한 6·7·9단계, B 본인 복원은 미실행으로 남습니다.
 
 - 기기 서명 키는 탭 메모리에만 있어, 새로 고치거나 탭을 닫으면 새 기기로 다시 승인받아야 합니다. 승인 대기 줄이 계속 쌓이므로 오래된 줄은 SQL로 정리해야 합니다.
 - 승인은 SQL Editor에서 지문을 눈으로 대조해 하는 수작업입니다. 다른 사람의 승인 대기 기기를 잘못 승인하지 않도록 `owner_id`도 함께 확인해야 합니다.
@@ -158,5 +208,7 @@
 - **2026-11-06 (10단계 사본·복원 준비):** `npm run policy:snapshot`으로 안전 정책 사본(`safe-2026-11-06-57b2c50`, 해시 `68fa0f04884e…`)을 만들었습니다. 사본을 한 글자 바꾸면 `policy:diff`가 해시 불일치로 중단했고, 원래대로 두면 통과했습니다. 시험 정책(판정기 18행을 메모 전체 목록 허용으로 바꿈)을 `policy:restore`로 되돌린 뒤 재확인 4건(A 한 건 `allow`, 목록 `deny`, B의 A 메모 404, A 본인 200)이 통과하고 감사 기록에 한 줄이 남았습니다. SQL Editor에서 `stage10-restore-backup.sql` ①~③을 실행해 B 메모 한 건의 사본이 생겼고 `sha_ok = true`, anon·authenticated 권한은 모두 false였습니다. 실제 `POST /api/restore` 호출과 복구 뒤 배포 앱 재시험은 미실행입니다.
 - **2026-11-06 (10단계):** `9075192` 배포 뒤 `npm run bundle` 자기 점검의 실제 요청 6건(로그인 없는 메모 목록·추가, 가짜 토큰, 로그인 없는 공지 목록·수정, 로그인 없는 `POST /api/restore`)이 모두 401이었습니다. 심판 판정은 「방어에 성공했습니다」, 100/100점(조건 5개, 완결성 가점 3개)으로 B 메모 변조·삭제 뒤 복구와 복구 직후 1~9단계 공격이 모두 막혔습니다.
 - **2026-11-06 (11단계 기기 승인 준비):** `npm test` 71개가 통과했습니다(승인 기기 서명만 통과, 서명 없음·서명 뒤 경로·본문·동작 변경·승인 전·다른 사람 기기·만료 서명은 거부). HTTPS 브라우저에서 화면과 같은 방식으로 만든 서명을 서버 검증 코드에 넣어 원래 요청은 통과, 본문·경로를 바꾼 요청은 `DEVICE_SIGNATURE_INVALID`임을 확인했습니다. SQL Editor에서 `stage11-devices.sql` ①·②를 실행해 anon·authenticated 권한은 모두 false, service_role은 SELECT·INSERT만 true였습니다. 배포 화면에서 실제 기기를 승인해 자료실을 여는 확인은 미실행입니다.
+- **2026-11-06 (11단계 배포 확인·심판):** `4352d66` 배포에서 A 계정으로 로그인하자 「승인 대기」와 기기 지문이 나오고 메모 0건, 나간 요청은 `/api/login`·`/api/devices`(201)뿐이었습니다. 탭을 새로 고치자 지문이 바뀌어 다시 승인 대기가 되었고, SQL로 새 지문을 승인한 뒤 「승인 다시 확인」에서 자료실이 열려 A 메모 4건이 보였습니다. 같은 로그인으로 서명 없이 보낸 `/api/notes`·`/api/notices`는 403 `DEVICE_SIGNATURE_REQUIRED`, 승인 지문에 지어낸 서명은 403 `DEVICE_SIGNATURE_INVALID`였습니다. 첫 제출(`4352d66`)은 로그인 토큰이 `sessionStorage`에 있어 `S11_KEY_EXPOSED`로 50점이었고, 세션을 메모리에만 두도록 고친 `1ae7fd6` 재제출은 「방어에 성공했습니다」, 100/100점(조건 6개, 완결성 가점 3개)이었습니다. 고친 뒤 배포 화면의 sessionStorage·localStorage·IndexedDB는 모두 비어 있었습니다.
+- **2026-11-06 (12단계 재확인 명령):** `1ae7fd6` 배포에 `npm run ops:recheck`를 실행해 계정 없이 보낸 10줄이 모두 기대와 일치(첫 화면 200, `/data.json` 404, 나머지 금지 요청 401)했고 불일치 0, 미실행 12였습니다. 작전실 화면의 「재확인 표 만들기」와 `/api/ops` 실측은 12단계 저장점 배포 뒤 확인합니다.
 
 `bundle-notes.json`과 `artifacts/submission.json`은 Git에서 무시되는 로컬 파일이며 커밋하지 않습니다. `npm run decider:test`와 `npm run detect:test`는 가상 연습이며 운영 심판 판정이 아닙니다.
