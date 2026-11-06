@@ -1,4 +1,4 @@
-# BYTE BACK 방어전 · 8단계 저장점
+# BYTE BACK 방어전 · 9단계 저장점
 
 모든 메모는 실습용 가상 자료입니다. 실제 개인정보, 비밀번호, 토큰, 서버 전용 키를 코드·Git·채팅에 넣지 마세요. 코딩 도구에는 [AGENTS.md](AGENTS.md)를 먼저 읽히세요.
 
@@ -13,7 +13,8 @@
 | 5 | 자료 요청을 서버 함수 한곳으로 모음: 브라우저의 Supabase 직접 자료 호출은 원래 없음(확인), `public.notes`의 PUBLIC·anon·authenticated 직접 권한 회수 SQL, `originalApiUrl` 기록, 원본 API 자기 점검 (`6141b8a`). 이어서 가점 작업으로 로그인·로그아웃도 서버 함수로 옮겨 화면 코드에서 Supabase 키·SDK 제거 |
 | 6 | 판정 요청의 등록 기기·가명 사용자·확인된 기기 ID와 `notes` 읽기 경로(`GET /notes`, `GET /notes/:id`)를 함께 확인합니다. 미등록·확인값 누락·다른 경로/동작은 `device_not_registered`로 거부 (`19efa2d`) |
 | 7 | 출처가 명시된 가상 신호만 검사하고, 야간·처음 보는 네트워크·5분 안의 대량 읽기가 함께 있을 때 `step_up_required`로 추가 확인을 요청하고, 계약의 `stepUp`으로 재확인을 마친 요청은 허용합니다. 지역만으로 차단하지 않습니다. 동일 로그인 재확인 시각 계약이 없어 실제 자료 차단·재로그인은 미실행 (`2c941aa`, 야간 시간대 보정 `cd89d13`, 저장점 `839eebb`, 세 신호 AND 규칙 `ad0968a`, fixture 결과 차이 검사 `1d4002a`, 시작 틀 사건 낱말 `e5e2710`, 재확인 반영 `01867ec`) |
-| 8 | 자원을 구역으로 나눔: 메모 `note:<id>`·강사 공지 `notice:<id>` 자원 ID, 판정기의 구역별 정확한 경로 규칙(`resource_zone`), 공지 쓰기의 저장된 강사 권한 대조와 짧은 거부 사유 기록. `allowedRoutes`는 판정기 허용 경로 세 개 (8단계 저장점) |
+| 8 | 자원을 구역으로 나눔: 메모 `note:<id>`·강사 공지 `notice:<id>` 자원 ID, 판정기의 구역별 정확한 경로 규칙(`resource_zone`), 공지 쓰기의 저장된 강사 권한 대조와 짧은 거부 사유 기록. `allowedRoutes`는 판정기 허용 경로 세 개 (`005f714`) |
+| 9 | 탐지기 `src/detect.mjs`: 사건의 `at`·`method`·`identity.sub`만 읽고, 같은 가명 사용자의 GET이 10분 안에 120건을 넘으면 `burst_read`로 회수를 제안(`propose_revocation`)합니다. 운영 반 엔진의 사건 전달·회수 집행은 미연결 (9단계 저장점) |
 
 ## 현재 동작
 
@@ -39,7 +40,8 @@
 - **자원 구역(8단계):** `src/resources.mjs`가 메모는 `note:<UUID>`(목록 `note:list`), 강사 공지는 `notice:<공지 ID>`(목록 `notice:list`)로 자원 ID를 정하고, 자료 API가 요청마다 응답 머리글 `x-resource-kind`·`x-resource-id`에 남깁니다. 응답 본문 모양은 그대로입니다. 강사 공지 `/api/notices`, `/api/notices/:id`(`src/notices-handler.mjs`)는 로그인한 사용자가 읽기만 하며, 공지 두 건은 코드 안의 실습용 가상 문구입니다.
 - **구역 판정(8단계):** 판정기는 등록 기기 확인 뒤 `ZONE_ROUTES`의 정확한 경로만 허용합니다. 메모는 `GET /notes/:id`(ID 형식은 좁히지 않음), 반 공지는 `GET /notices`·`GET /notices/:id`뿐입니다. 메모 전체 목록, 메모·공지 쓰기, 강사 자료 등 다른 서비스, 알 수 없는 경로, 쿼리가 붙은 요청, `:id` 아래 기능 경로는 `deny`(`resource_zone`, 이유 코드는 등록된 `device_not_registered`)입니다. 메모 주인 비교는 판정기가 아니라 자료 API가 합니다.
 - **API 권한 재대조(8단계):** 공지 쓰기는 검증된 Supabase 로그인 사용자를 서버 환경변수 `INSTRUCTOR_USER_IDS`(쉼표로 구분한 사용자 UUID)와 대조해, 목록에 없으면 403 `NOT_INSTRUCTOR`입니다. 화면 메뉴나 본문의 `role`은 보지 않습니다. 강사라도 공지 저장소가 없어 수정은 501로 받지 않습니다. 메모·공지 API는 거부할 때 `{event:'api_denied', zone, method, reason}`만 Vercel 함수 기록에 남기며 사용자 번호·토큰·본문은 넣지 않습니다.
-- **설정 `aleph.config.json`:** `step`은 8, `identityProvider`는 Supabase Auth의 발급자(`…/auth/v1`), 대상(`authenticated`), 공개키 주소(`…/.well-known/jwks.json`)이며 비밀 키는 들어 있지 않습니다. `allowedRoutes`는 판정기가 허용하는 `GET /api/notes/:id`, `GET /api/notices`, `GET /api/notices/:id` 세 경로, `originalApiUrl`은 쿼리 없는 원본 자료 주소입니다. 화면의 메모 목록·추가·수정·삭제와 로그인·로그아웃 API는 서버 함수에 그대로 있지만 판정기 허용 경로에는 넣지 않았습니다.
+- **도플갱어 탐지(9단계):** `src/detect.mjs`의 `detect(events)`는 `docs/DETECT_EVENTS.md`의 사건 모양 그대로 각 사건에서 `at`·`method`·`identity.sub` 세 값만 읽고, 형식이 틀린 사건은 세지 않습니다. 네트워크·기기·지역 값은 쓰지 않고 토큰·본문은 복사하지 않습니다. 같은 `sub`의 GET이 `at` 기준 어느 10분 구간(시작 시각부터 10분 미만)에서든 121건 이상이면 정확히 `{action:'propose_revocation', reasonCode:'burst_read', subject}`를, 아니면 `{action:'observe'}`를 돌려줍니다. 정확히 120건, 10분 밖으로 흩어진 조회, 다른 사용자의 합산은 정상입니다. 회수는 제안만 하며 회수 API를 부르거나 기기 권한을 바꾸지 않습니다. `npm run detect:test`는 가상 사건 연습이며, 운영 반 엔진의 사건 전달과 접속 회수는 연결·시험하지 않았습니다.
+- **설정 `aleph.config.json`:** `step`은 9, `identityProvider`는 Supabase Auth의 발급자(`…/auth/v1`), 대상(`authenticated`), 공개키 주소(`…/.well-known/jwks.json`)이며 비밀 키는 들어 있지 않습니다. `allowedRoutes`는 판정기가 허용하는 `GET /api/notes/:id`, `GET /api/notices`, `GET /api/notices/:id` 세 경로, `originalApiUrl`은 쿼리 없는 원본 자료 주소입니다. 화면의 메모 목록·추가·수정·삭제와 로그인·로그아웃 API는 서버 함수에 그대로 있지만 판정기 허용 경로에는 넣지 않았습니다.
 - **라우팅 `vercel.json`:** `/api/notes/:id`를 `/api/notes?id=:id`로, `/api/notices(/:id)`를 `/api/notes?zone=notices(&id=:id)`로, `/api/login`·`/api/logout`을 `/api/notes?session=login|logout`으로 넘겨 함수 파일 하나(`api/notes.js`)가 처리합니다. 시작 틀의 서버 함수 기준표(`package/baseline-functions.json`)에 맞춰 함수 파일을 늘리지 않았습니다. 빌드는 `public/aleph.json`에 저장소·커밋·배포 주소와 단계를 기록하고, `data.json`이 남아 있으면 실패합니다.
 
 ## 처음 준비와 다시 실행하는 방법
@@ -51,6 +53,7 @@
 5. **Vercel 환경변수:** 프로젝트 Settings > Environment Variables에 `SUPABASE_URL`과 `SUPABASE_SECRET_KEY`(서버 전용 키)가 있어야 합니다. 값은 직접 입력하고 저장한 뒤 Redeploy 합니다. `SUPABASE_SECRET_KEY`는 DB 읽기·쓰기, 로그인·로그아웃, 로그인 검사에 서버에서만 쓰입니다.
 6. **시험:** `npm test`.
 7. **판정기 연습(7·8단계):** `npm run fixture:7`과 `npm run decider:test`를 실행합니다. 정상·지역만 다른 사건은 `allow`, 복합 이상 사건은 `step_up`, 누락·위조 출처 신호도 정상 접속 정보로 승격되지 않는지, 메모 한 건·공지 읽기만 허용되고 메모 목록·쓰기·강사 자료·쿼리 요청은 `deny`인지 확인합니다. 둘 다 가상 요청 연습이며 실제 심판 판정은 아닙니다.
+   - **탐지 연습(9단계):** `npm run detect:test`에서 10분 안 121건·200건 폭주는 `propose_revocation`, 정상 30건·120건·두 사용자 각 100건·흩어진 200건은 `observe`여야 합니다.
    - **강사 권한(선택):** 강사 계정이 있으면 Vercel 환경변수 `INSTRUCTOR_USER_IDS`에 그 사용자 UUID를 넣고 Redeploy 합니다. 넣지 않으면 모든 공지 쓰기가 403입니다.
 8. **제출 묶음:** 원본 API 자기 점검에는 공개용 키가 필요합니다. 화면 코드에 키가 없으므로 `SUPABASE_PUBLISHABLE_KEY=sb_publishable_… npm run bundle`처럼 실행할 때만 넘깁니다. 키 없이 실행하면 그 점검은 미실행으로 남습니다. 가짜 검사기와 가짜 저장소로 도는 시험이며 실제 로그인이나 배포를 확인하지 않습니다.
 
@@ -67,7 +70,10 @@
 - 공개 파일 검색은 아래 한 줄입니다. 결과가 비어 있어야 정상입니다.
   `git grep -n -E "실습용 가상 (과제|포트폴리오|리추얼|행정) 기록" origin/main`
 
-## 알려진 약점 (8단계 기준)
+## 알려진 약점 (9단계 기준)
+
+- 탐지기는 회수를 제안만 합니다. 운영 반 엔진이 사건을 전달하고 제안을 집행하는 경로가 연결되지 않아, 실제로 회수된 신원·남은 세션의 재접속을 막는지는 시험하지 않았습니다.
+- 탐지 규칙은 GET 폭주 하나뿐입니다. 느리게 오래 긁어 가는 조회(10분에 120건 이하)는 잡지 않습니다.
 
 - 강사 공지는 코드 안의 가상 문구라 강사도 고칠 수 없습니다. 공지 저장소와 강사 관리 경로는 아직 없습니다.
 - 강사 권한은 서버 환경변수의 사용자 UUID 목록에 달려 있어, 바꾸려면 Vercel 설정을 고치고 다시 배포해야 합니다.
@@ -94,5 +100,7 @@
 - **5단계 가점(로그인 서버 이전):** (배포 뒤 A·B 로그인·로그아웃, 틀린 비밀번호 안내, 화면 원본의 키 0건을 확인한 뒤 여기에 적으세요.)
 - **2026-11-03 (7단계 가상 판정기 연습):** `npm run fixture:7`에서 정상·지역 단독은 `allow`, 복합 이상·불명확한 출처·위조 헤더는 `step_up`이었습니다. `npm run decider:test`의 10개 가상 확인과 `npm test`의 41개 테스트, `npm run build -- --local`이 통과했습니다(야간 시간대 보정 `cd89d13` 뒤에도 다시 실행). 접속 정보의 출처가 `judge_fixture`가 아니거나 `headers` 같은 계약 밖 항목, 누락·형식 오류 신호가 있으면 모두 `step_up`이었습니다. 같은 로그인 재확인 계약이 없어 실제 자료 차단은 미실행입니다.
 - **2026-11-06 (7단계 심판 재제출):** `62fe220` 제출은 심판 기록 코드 `S07_SAME_VERDICT`(지역 급변 사건에서 정상·복합 이상 판정이 같음)로 51점이었습니다. 연습 사건을 판정기 낱말로 바꿔 둔 탓에, 시작 틀의 `unusual`·`risk_signal` 사건이 `allow`로 빠진 것이 원인이었습니다. `e5e2710`에서 두 낱말을 받게 하자 정상과 복합 이상은 구분됐지만, 재확인한 복합 이상 요청이 `step_up`으로 남아 다시 불통과였습니다. `01867ec`에서 계약의 `stepUp` 재확인(0~900초)을 반영한 뒤 심판 판정은 「방어에 성공했습니다」, 100/100점(조건 7개, 완결성 가점 3개)이었습니다. 제출 전 `npm run fixture:7`, `npm run decider:test`(11개), `npm test`(41개)가 통과했습니다. 실제 자료 차단·재로그인은 여전히 미실행입니다.
+- **2026-11-06 (8단계):** `005f714` 배포 뒤 `npm run bundle` 자기 점검에서 로그인 없는 메모 목록·추가, 가짜 토큰 목록, 로그인 없는 공지 목록·공지 수정이 모두 401이었습니다. 심판 판정은 「방어에 성공했습니다」, 100/100점(조건 5개, 완결성 가점 3개)으로 다른 구역 메모 조회·수정·목록 조회와 학생 계정의 강사 공지 수정이 모두 막혔습니다. 제출 전 `npm run decider:test`(25개), `npm test`(47개)가 통과했습니다.
+- **2026-11-06 (9단계 가상 탐지 연습):** `npm run detect:test` 6건이 모두 통과했습니다(121건·200건 폭주는 `propose_revocation`, 나머지는 `observe`). `npm test` 54개와 `npm run decider:test` 25개도 통과했습니다. 운영 반 엔진의 사건 전달·회수 집행은 연결되지 않아 미실행입니다.
 
 `bundle-notes.json`과 `artifacts/submission.json`은 Git에서 무시되는 로컬 파일이며 커밋하지 않습니다. `npm run decider:test`와 `npm run detect:test`는 가상 연습이며 운영 심판 판정이 아닙니다.

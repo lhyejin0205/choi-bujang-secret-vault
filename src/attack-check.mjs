@@ -129,6 +129,14 @@ async function checkNoticeZone(app) {
   ];
 }
 
+// 9단계: 탐지 규칙(src/detect.mjs)은 npm run detect:test의 가상 사건으로만 연습합니다.
+// 운영 반 엔진의 사건 전달과 접속 회수 집행은 연결되지 않아 배포 앱에 요청을 보내지 않습니다.
+const DETECTION_NOT_SENT = {
+  attackId: 'burst_read_revocation',
+  expected: '같은 가명 사용자가 10분 안에 121건 이상 조회하면 회수 제안 뒤 다음 요청이 막힘',
+  observed: '미실행. 운영 반 엔진의 사건 전달·회수 집행이 연결되지 않아 실제 요청을 보내지 않음',
+};
+
 async function checkOriginalApiClosed(config, env) {
   const url = originalUrl(config);
   const key = publishableKey(env);
@@ -158,7 +166,7 @@ async function checkOriginalApiClosed(config, env) {
 }
 
 export async function runAttackChecks(config, env = process.env) {
-  if (![1, 2, 3, 4, 5, 6, 7, 8].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
   if (config.step >= 5) {
@@ -166,6 +174,7 @@ export async function runAttackChecks(config, env = process.env) {
       ...OWNER_ATTACKS.map(([attackId, expected]) => ({ attackId, expected, observed: notSent }))];
     if (config.step >= 7) results.push(STEP_UP_NOT_SENT);
     if (config.step >= 8) results.push(...await checkNoticeZone(app));
+    if (config.step >= 9) results.push(DETECTION_NOT_SENT);
     return results;
   }
   if (config.step === 4) {
