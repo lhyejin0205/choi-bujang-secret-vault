@@ -1,6 +1,7 @@
 import config from '../aleph.config.json' with { type: 'json' };
 import { handleNotesRequest } from '../src/notes-handler.mjs';
 import { handleNoticesRequest } from '../src/notices-handler.mjs';
+import { handleRestoreRequest } from '../src/restore-handler.mjs';
 import { handleLogin, handleLogout } from '../src/session-handler.mjs';
 
 // 로그인 검사는 틀이 준 src/verify-login.mjs를 그대로 씁니다.
@@ -30,6 +31,10 @@ export default function handler(request, response) {
   if (session === 'login') return handleLogin(request, response);
   if (session === 'logout') return handleLogout(request, response);
   // 8단계: /api/notices, /api/notices/:id → /api/notes?zone=notices(&id=) 로 넘어온 강사 공지 구역
+  // 10단계: /api/restore → /api/notes?zone=restore 로 넘어온 B 메모 한 건 복원 경로
+  if (request.query?.zone === 'restore') {
+    return handleRestoreRequest(request, response, { verifyLogin, log: logDenial });
+  }
   if (request.query?.zone === 'notices') {
     return handleNoticesRequest(request, response, { verifyLogin, log: logDenial });
   }

@@ -8,7 +8,8 @@
     { "source": "/api/login", "destination": "/api/notes?session=login" },
     { "source": "/api/logout", "destination": "/api/notes?session=logout" },
     { "source": "/api/notices/:id", "destination": "/api/notes?zone=notices&id=:id" },
-    { "source": "/api/notices", "destination": "/api/notes?zone=notices" }
+    { "source": "/api/notices", "destination": "/api/notes?zone=notices" },
+    { "source": "/api/restore", "destination": "/api/notes?zone=restore" }
   ],
   "headers": [
     {

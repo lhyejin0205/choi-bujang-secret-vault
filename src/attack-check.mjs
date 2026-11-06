@@ -137,6 +137,22 @@ const DETECTION_NOT_SENT = {
   observed: '미실행. 운영 반 엔진의 사건 전달·회수 집행이 연결되지 않아 실제 요청을 보내지 않음',
 };
 
+// 10단계: 복원 경로 POST /api/restore 를 로그인 없이 부르는 요청만 실제로 보내 응답 코드를 기록합니다.
+// B 본인이 메모를 변조·삭제한 뒤 복원하는 시험은 B 계정 토큰이 필요해 보내지 않습니다.
+async function checkRestoreRoute(app) {
+  const response = await fetch(new URL('/api/restore', app), {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}', redirect: 'error', signal: timeout(),
+  });
+  return [
+    { attackId: 'anonymous_restore_call', expected: '로그인 없이 POST /api/restore 로 B 메모 복원을 실행',
+      observed: response.status >= 200 && response.status < 300
+        ? `로그인 없는 복원 요청이 받아들여짐 (HTTP ${response.status})`
+        : `로그인 없는 복원 요청이 거부됨 (HTTP ${response.status})` },
+    { attackId: 'b_note_restore_after_tamper', expected: 'B 메모를 변조·삭제한 뒤 B가 POST /api/restore 로 한 건만 복원',
+      observed: '미실행. B 계정 토큰이 필요하고 실제 메모를 바꿔야 해 이 점검에서는 보내지 않음' },
+  ];
+}
+
 async function checkOriginalApiClosed(config, env) {
   const url = originalUrl(config);
   const key = publishableKey(env);
@@ -166,7 +182,7 @@ async function checkOriginalApiClosed(config, env) {
 }
 
 export async function runAttackChecks(config, env = process.env) {
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
   if (config.step >= 5) {
@@ -175,6 +191,7 @@ export async function runAttackChecks(config, env = process.env) {
     if (config.step >= 7) results.push(STEP_UP_NOT_SENT);
     if (config.step >= 8) results.push(...await checkNoticeZone(app));
     if (config.step >= 9) results.push(DETECTION_NOT_SENT);
+    if (config.step >= 10) results.push(...await checkRestoreRoute(app));
     return results;
   }
   if (config.step === 4) {
