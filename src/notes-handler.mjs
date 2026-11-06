@@ -58,7 +58,7 @@ const triesOtherOwner = (body, userId) => OWNER_KEYS.some(key => body
 const noteOut = row => ({ id: row.id, title: row.title, body: row.content });
 
 export async function handleNotesRequest(request, response, options = {}) {
-  const { env = process.env, fetchImpl = globalThis.fetch, verifyLogin, log = () => {} } = options;
+  const { env = process.env, fetchImpl = globalThis.fetch, verifyLogin, requireDevice, log = () => {} } = options;
   // 8단계: 거부할 때 짧은 사유를 서버 기록에 남깁니다. 사용자 번호·토큰·메모 본문은 넣지 않습니다.
   const deny = (status, body, reason) => {
     log({ event: 'api_denied', zone: 'note', method: request.method, reason });
@@ -86,6 +86,11 @@ export async function handleNotesRequest(request, response, options = {}) {
   if (!user || typeof user.userId !== 'string' || !UUID.test(user.userId)) {
     response.setHeader('www-authenticate', 'Bearer');
     return deny(401, { error: 'UNAUTHORIZED' }, 'no_valid_login');
+  }
+  // 11단계: 서버 함수가 넘겨준 기기 확인(승인된 기기의 요청 서명)을 통과해야 자료에 닿습니다.
+  if (typeof requireDevice === 'function') {
+    const device = await requireDevice(user);
+    if (!device.ok) return deny(device.status ?? 403, { error: device.error }, device.reason);
   }
 
   // 2) 데이터베이스 설정

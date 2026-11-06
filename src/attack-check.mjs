@@ -153,6 +153,37 @@ async function checkRestoreRoute(app) {
   ];
 }
 
+// 11단계: 로그인 없이 기기를 "승인됨"으로 등록하려는 요청과, 서명 머리글을 지어낸 로그인 없는 보호 요청을 실제로 보냅니다.
+// 로그인한 계정에서 서명 없이·서명 뒤 경로나 본문을 바꿔 보내는 시험은 계정 토큰이 필요해 보내지 않습니다.
+async function checkDeviceApproval(app) {
+  const send = (path, init) => fetch(new URL(path, app), { redirect: 'error', signal: timeout(), ...init });
+  const register = await send('/api/devices', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ publicKey: { kty: 'EC', crv: 'P-256', x: 'A'.repeat(43), y: 'B'.repeat(43) }, status: 'approved' }),
+  });
+  const forged = await send('/api/notes', {
+    method: 'GET', headers: { 'x-device-key': '0'.repeat(64), 'x-device-time': String(Date.now()), 'x-device-signature': 'A'.repeat(86) },
+  });
+  let leaked = false;
+  try {
+    const data = await forged.json();
+    leaked = forged.ok && Array.isArray(data) && data.length > 0;
+  } catch {
+    leaked = false;
+  }
+  const rejected = status => !(status >= 200 && status < 300);
+  return [
+    { attackId: 'anonymous_device_approval', expected: '로그인 없이 본문에 status:approved를 넣어 기기를 등록',
+      observed: rejected(register.status) ? `로그인 없는 기기 등록이 거부됨 (HTTP ${register.status})`
+        : `로그인 없는 기기 등록이 받아들여짐 (HTTP ${register.status})` },
+    { attackId: 'forged_device_signature_read', expected: '지어낸 기기 서명 머리글만으로 /api/notes에서 메모를 확인',
+      observed: leaked ? `지어낸 서명 요청에서 자료가 반환됨 (HTTP ${forged.status})`
+        : `지어낸 서명 요청에서 자료가 반환되지 않음 (HTTP ${forged.status})` },
+    { attackId: 'signed_request_tampered', expected: '로그인한 계정으로 서명 없이, 또는 서명 뒤 경로·본문을 바꿔 보호 요청',
+      observed: '미실행. 계정 토큰과 승인된 기기가 필요해 이 점검에서는 보내지 않음' },
+  ];
+}
+
 async function checkOriginalApiClosed(config, env) {
   const url = originalUrl(config);
   const key = publishableKey(env);
@@ -182,7 +213,7 @@ async function checkOriginalApiClosed(config, env) {
 }
 
 export async function runAttackChecks(config, env = process.env) {
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(config.step)) throw new Error('이 단계의 공격 점검을 src/attack-check.mjs에 구현해 주세요.');
   const app = appUrl(config);
   if (config.step === 3) return checkLoginRequired(app);
   if (config.step >= 5) {
@@ -192,6 +223,7 @@ export async function runAttackChecks(config, env = process.env) {
     if (config.step >= 8) results.push(...await checkNoticeZone(app));
     if (config.step >= 9) results.push(DETECTION_NOT_SENT);
     if (config.step >= 10) results.push(...await checkRestoreRoute(app));
+    if (config.step >= 11) results.push(...await checkDeviceApproval(app));
     return results;
   }
   if (config.step === 4) {

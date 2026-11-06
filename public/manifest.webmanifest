@@ -1,0 +1,14 @@
+{
+  "name": "BYTE BACK 자료실",
+  "short_name": "자료실",
+  "description": "실습용 가상 자료실입니다. 앱으로 설치해도 기기 승인은 서버가 따로 확인합니다. 인터넷 연결이 없으면 자료를 불러올 수 없습니다.",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#101a28",
+  "theme_color": "#101a28",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -32,7 +32,7 @@ function routeId(request) {
 }
 
 export async function handleNoticesRequest(request, response, options = {}) {
-  const { verifyLogin, env = process.env, log = () => {} } = options;
+  const { verifyLogin, env = process.env, requireDevice, log = () => {} } = options;
   const id = routeId(request);
   markResourceKind(response, 'notice');
   const deny = (status, error, reason) => {
@@ -54,6 +54,11 @@ export async function handleNoticesRequest(request, response, options = {}) {
   if (!user || typeof user.userId !== 'string' || !UUID.test(user.userId)) {
     response.setHeader('www-authenticate', 'Bearer');
     return deny(401, 'UNAUTHORIZED', 'no_valid_login');
+  }
+  // 11단계: 승인된 기기의 요청 서명을 통과해야 공지에 닿습니다.
+  if (typeof requireDevice === 'function') {
+    const device = await requireDevice(user);
+    if (!device.ok) return deny(device.status ?? 403, device.error, device.reason);
   }
 
   if (WRITE_METHODS.includes(request.method)) {
